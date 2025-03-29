@@ -9,7 +9,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -29,8 +28,12 @@ import com.example.facedetectionusingmlkit.data.entity.GalleryPhotoEntity
 fun GridPhotoView(modifier: Modifier = Modifier, myViewModel: MyViewModel = hiltViewModel()) {
     val galleryImageList by myViewModel.galleryImages.collectAsState(initial = emptyList())
 
+    val gridState = rememberSaveable(saver = LazyGridState.Saver) {
+        LazyGridState()
+    }
     Box(modifier = modifier) {
         LazyVerticalGrid(
+            state = gridState,
             columns = GridCells.Adaptive(128.dp),
             modifier = Modifier.padding(0.dp)
         ) {

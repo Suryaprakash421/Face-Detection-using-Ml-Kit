@@ -31,8 +31,9 @@ fun BottomBarNavigation(navController: NavController, modifier: Modifier = Modif
                 onClick = {
                     selectedIndex = index
                     navController.navigate(destination.route) {
-                        popUpTo(Home.route)
-                        launchSingleTop
+                        popUpTo(navController.graph.startDestinationId) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
                     }
                 },
                 label = { Text(text = destination.title) },
