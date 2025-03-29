@@ -73,7 +73,7 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     kapt(libs.androidx.room.compiler)
     implementation(libs.androidx.room.ktx)
-    implementation (libs.kotlinx.coroutines.core)
+    implementation(libs.kotlinx.coroutines.core)
 
     // Hilt
     implementation(libs.androidx.hilt.navigation.compose)
@@ -85,4 +85,7 @@ dependencies {
 
     // Coil
     implementation(libs.coil.compose)
+
+    // Navigation
+    implementation(libs.androidx.navigation.compose)
 }
