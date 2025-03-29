@@ -72,12 +72,13 @@ dependencies {
     // Room DB
     implementation(libs.androidx.room.runtime)
     kapt(libs.androidx.room.compiler)
-    // Room with Kotlin Coroutines Support
     implementation(libs.androidx.room.ktx)
 
     // Hilt
     implementation(libs.androidx.hilt.navigation.compose)
-    // Hilt for Dependency Injection
     implementation(libs.hilt.android)
     kapt(libs.hilt.compiler)
+
+    // Gson
+    implementation(libs.gson)
 }
