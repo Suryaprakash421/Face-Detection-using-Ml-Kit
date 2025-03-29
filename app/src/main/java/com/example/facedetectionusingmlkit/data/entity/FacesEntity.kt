@@ -7,6 +7,7 @@ import androidx.room.PrimaryKey
 import androidx.room.TypeConverters
 import com.example.facedetectionusingmlkit.data.converters.FloatArrayTypeConverter
 import com.example.facedetectionusingmlkit.data.converters.RectTypeConverter
+import com.example.facedetectionusingmlkit.data.converters.SimilarFaceTypeConverter
 import com.example.facedetectionusingmlkit.data.converters.UUIDTypeConverter
 import com.example.facedetectionusingmlkit.data.converters.UriTypeConverter
 import java.util.UUID
@@ -16,7 +17,8 @@ import java.util.UUID
     FloatArrayTypeConverter::class,
     UriTypeConverter::class,
     UUIDTypeConverter::class,
-    RectTypeConverter::class
+    RectTypeConverter::class,
+    SimilarFaceTypeConverter::class
 )
 data class FacesEntity(
     @PrimaryKey val id: UUID,

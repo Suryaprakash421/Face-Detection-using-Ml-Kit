@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -18,15 +19,17 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 
 @Composable
-fun RequestMediaPermissions() {
+fun RequestMediaPermissions(isGranted: (isGranted: Boolean) -> Unit) {
     val context = LocalContext.current
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
         val granted = permissions.entries.all { it.value }
         if (granted) {
+            isGranted.invoke(true)
             Toast.makeText(context, "Permissions Granted!", Toast.LENGTH_SHORT).show()
         } else {
+            isGranted.invoke(false)
             Toast.makeText(context, "Permissions Denied!", Toast.LENGTH_SHORT).show()
         }
     }
@@ -46,6 +49,14 @@ fun RequestMediaPermissions() {
         ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
     }
 
+    LaunchedEffect(Unit) {
+        if (!allPermissionsGranted) {
+            permissionLauncher.launch(requiredPermissions)
+        } else {
+            isGranted.invoke(true)
+        }
+    }
+
     Column(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -56,7 +67,9 @@ fun RequestMediaPermissions() {
                 if (!allPermissionsGranted) {
                     permissionLauncher.launch(requiredPermissions)
                 } else {
-                    Toast.makeText(context, "Permissions already granted!", Toast.LENGTH_SHORT).show()
+                    isGranted.invoke(true)
+                    Toast.makeText(context, "Permissions already granted!", Toast.LENGTH_SHORT)
+                        .show()
                 }
             }
         ) {
