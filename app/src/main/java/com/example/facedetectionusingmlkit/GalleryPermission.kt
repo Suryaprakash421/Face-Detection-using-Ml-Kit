@@ -2,6 +2,7 @@ package com.example.facedetectionusingmlkit
 
 import android.content.pm.PackageManager
 import android.os.Build
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -17,6 +18,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.facedetectionusingmlkit.utils.getGalleryPhotos
+
+@Composable
+fun CheckPermission(modifier: Modifier = Modifier, myViewModel: MyViewModel = hiltViewModel()) {
+    val context = LocalContext.current
+    RequestMediaPermissions() { isGranted ->
+        Log.d("isGranted", "isGranted: $isGranted")
+        if (isGranted) {
+            val galleryPhotos = getGalleryPhotos(context)
+            Log.d("isGranted", "galleryPhotos: ${galleryPhotos.size}")
+            myViewModel.insertGalleryImages(galleryPhotos)
+        }
+
+    }
+}
 
 @Composable
 fun RequestMediaPermissions(isGranted: (isGranted: Boolean) -> Unit) {
@@ -57,23 +74,19 @@ fun RequestMediaPermissions(isGranted: (isGranted: Boolean) -> Unit) {
         }
     }
 
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Button(
-            onClick = {
-                if (!allPermissionsGranted) {
-                    permissionLauncher.launch(requiredPermissions)
-                } else {
-                    isGranted.invoke(true)
-                    Toast.makeText(context, "Permissions already granted!", Toast.LENGTH_SHORT)
-                        .show()
-                }
-            }
+    if (!allPermissionsGranted) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Text("Request Media Permissions")
+            Button(
+                onClick = {
+                    permissionLauncher.launch(requiredPermissions)
+                }
+            ) {
+                Text("Request Media Permissions")
+            }
         }
     }
 }
