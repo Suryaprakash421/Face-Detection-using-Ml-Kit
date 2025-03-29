@@ -73,6 +73,7 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     kapt(libs.androidx.room.compiler)
     implementation(libs.androidx.room.ktx)
+    implementation (libs.kotlinx.coroutines.core)
 
     // Hilt
     implementation(libs.androidx.hilt.navigation.compose)
@@ -81,4 +82,7 @@ dependencies {
 
     // Gson
     implementation(libs.gson)
+
+    // Coil
+    implementation(libs.coil.compose)
 }

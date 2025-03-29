@@ -13,7 +13,10 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -38,14 +41,19 @@ fun CheckPermission(modifier: Modifier = Modifier, myViewModel: MyViewModel = hi
 @Composable
 fun RequestMediaPermissions(isGranted: (isGranted: Boolean) -> Unit) {
     val context = LocalContext.current
+    var isPermissionGranted by remember {
+        mutableStateOf(false)
+    }
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
         val granted = permissions.entries.all { it.value }
         if (granted) {
+            isPermissionGranted = true
             isGranted.invoke(true)
             Toast.makeText(context, "Permissions Granted!", Toast.LENGTH_SHORT).show()
         } else {
+            isPermissionGranted = false
             isGranted.invoke(false)
             Toast.makeText(context, "Permissions Denied!", Toast.LENGTH_SHORT).show()
         }
@@ -70,11 +78,13 @@ fun RequestMediaPermissions(isGranted: (isGranted: Boolean) -> Unit) {
         if (!allPermissionsGranted) {
             permissionLauncher.launch(requiredPermissions)
         } else {
+            isPermissionGranted = true
             isGranted.invoke(true)
         }
     }
 
-    if (!allPermissionsGranted) {
+    Log.i("isPermissionGranted", "isPermissionGranted: $isPermissionGranted")
+    if (!isPermissionGranted) {
         Column(
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
