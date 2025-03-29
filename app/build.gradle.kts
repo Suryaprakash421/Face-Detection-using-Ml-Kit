@@ -1,6 +1,8 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
+    id("kotlin-kapt")
+    id("com.google.dagger.hilt.android")
 }
 
 android {
@@ -66,4 +68,16 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+
+    // Room DB
+    implementation(libs.androidx.room.runtime)
+    kapt(libs.androidx.room.compiler)
+    // Room with Kotlin Coroutines Support
+    implementation(libs.androidx.room.ktx)
+
+    // Hilt
+    implementation(libs.androidx.hilt.navigation.compose)
+    // Hilt for Dependency Injection
+    implementation(libs.hilt.android)
+    kapt(libs.hilt.compiler)
 }
