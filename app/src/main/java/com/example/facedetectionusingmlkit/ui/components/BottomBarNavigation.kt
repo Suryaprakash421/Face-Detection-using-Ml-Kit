@@ -1,4 +1,4 @@
-package com.example.facedetectionusingmlkit.screens
+package com.example.facedetectionusingmlkit.ui.components
 
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -7,13 +7,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
-import com.example.facedetectionusingmlkit.navigation.FaceDetection
-import com.example.facedetectionusingmlkit.navigation.Home
+import com.example.facedetectionusingmlkit.route.FaceDetection
+import com.example.facedetectionusingmlkit.route.Home
 
 @Composable
 fun BottomBarNavigation(navController: NavController, modifier: Modifier = Modifier) {

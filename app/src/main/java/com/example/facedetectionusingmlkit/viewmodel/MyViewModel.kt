@@ -1,10 +1,10 @@
-package com.example.facedetectionusingmlkit
+package com.example.facedetectionusingmlkit.viewmodel
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.facedetectionusingmlkit.data.entity.GalleryPhotoEntity
-import com.example.facedetectionusingmlkit.repositories.MyRepository
+import com.example.facedetectionusingmlkit.data.local.entity.GalleryPhotoEntity
+import com.example.facedetectionusingmlkit.data.repositories.MyRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow

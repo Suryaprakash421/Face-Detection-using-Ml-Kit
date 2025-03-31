@@ -3,9 +3,9 @@ package com.example.facedetectionusingmlkit.di
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.room.Room
-import com.example.facedetectionusingmlkit.data.FaceDetectionDatabase
-import com.example.facedetectionusingmlkit.data.PrefManager
-import com.example.facedetectionusingmlkit.data.dao.FacesAndPhotosDao
+import com.example.facedetectionusingmlkit.data.local.FaceDetectionDatabase
+import com.example.facedetectionusingmlkit.data.local.PrefManager
+import com.example.facedetectionusingmlkit.data.local.dao.FacesAndPhotosDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

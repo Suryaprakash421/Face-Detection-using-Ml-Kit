@@ -1,7 +1,7 @@
-package com.example.facedetectionusingmlkit.data.converters
+package com.example.facedetectionusingmlkit.data.local.converters
 
 import androidx.room.TypeConverter
-import com.example.facedetectionusingmlkit.data.entity.SimilarFaceWithSimilarity
+import com.example.facedetectionusingmlkit.data.local.entity.SimilarFaceWithSimilarity
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import java.util.UUID

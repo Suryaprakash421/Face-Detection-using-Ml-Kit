@@ -1,4 +1,4 @@
-package com.example.facedetectionusingmlkit.screens
+package com.example.facedetectionusingmlkit.ui.screens.home
 
 import android.content.pm.PackageManager
 import android.os.Build
@@ -22,8 +22,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.facedetectionusingmlkit.GridPhotoView
-import com.example.facedetectionusingmlkit.MyViewModel
+import com.example.facedetectionusingmlkit.ui.components.GridPhotoView
+import com.example.facedetectionusingmlkit.viewmodel.MyViewModel
 import com.example.facedetectionusingmlkit.utils.getGalleryPhotos
 
 @Composable

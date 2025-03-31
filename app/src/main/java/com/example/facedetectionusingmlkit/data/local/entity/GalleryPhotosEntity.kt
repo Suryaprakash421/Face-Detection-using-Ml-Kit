@@ -1,4 +1,4 @@
-package com.example.facedetectionusingmlkit.data.entity
+package com.example.facedetectionusingmlkit.data.local.entity
 
 import android.net.Uri
 import androidx.room.Entity

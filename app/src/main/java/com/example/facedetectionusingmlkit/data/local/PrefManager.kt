@@ -1,4 +1,4 @@
-package com.example.facedetectionusingmlkit.data
+package com.example.facedetectionusingmlkit.data.local
 
 import android.content.SharedPreferences
 

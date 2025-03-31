@@ -1,4 +1,4 @@
-package com.example.facedetectionusingmlkit
+package com.example.facedetectionusingmlkit.ui.components
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
@@ -22,7 +22,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
-import com.example.facedetectionusingmlkit.data.entity.GalleryPhotoEntity
+import com.example.facedetectionusingmlkit.viewmodel.MyViewModel
+import com.example.facedetectionusingmlkit.data.local.entity.GalleryPhotoEntity
 
 @Composable
 fun GridPhotoView(modifier: Modifier = Modifier, myViewModel: MyViewModel = hiltViewModel()) {

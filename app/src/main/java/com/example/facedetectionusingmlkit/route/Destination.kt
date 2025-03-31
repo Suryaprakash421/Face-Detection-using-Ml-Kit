@@ -1,4 +1,4 @@
-package com.example.facedetectionusingmlkit.navigation
+package com.example.facedetectionusingmlkit.route
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Face

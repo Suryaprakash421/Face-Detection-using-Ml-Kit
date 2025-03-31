@@ -1,15 +1,15 @@
-package com.example.facedetectionusingmlkit.data.entity
+package com.example.facedetectionusingmlkit.data.local.entity
 
 import android.graphics.Rect
 import android.net.Uri
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import androidx.room.TypeConverters
-import com.example.facedetectionusingmlkit.data.converters.FloatArrayTypeConverter
-import com.example.facedetectionusingmlkit.data.converters.RectTypeConverter
-import com.example.facedetectionusingmlkit.data.converters.SimilarFaceTypeConverter
-import com.example.facedetectionusingmlkit.data.converters.UUIDTypeConverter
-import com.example.facedetectionusingmlkit.data.converters.UriTypeConverter
+import com.example.facedetectionusingmlkit.data.local.converters.FloatArrayTypeConverter
+import com.example.facedetectionusingmlkit.data.local.converters.RectTypeConverter
+import com.example.facedetectionusingmlkit.data.local.converters.SimilarFaceTypeConverter
+import com.example.facedetectionusingmlkit.data.local.converters.UUIDTypeConverter
+import com.example.facedetectionusingmlkit.data.local.converters.UriTypeConverter
 import java.util.UUID
 
 @Entity(tableName = "faces")

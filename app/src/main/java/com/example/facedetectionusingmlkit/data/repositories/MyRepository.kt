@@ -1,7 +1,7 @@
-package com.example.facedetectionusingmlkit.repositories
+package com.example.facedetectionusingmlkit.data.repositories
 
-import com.example.facedetectionusingmlkit.data.dao.FacesAndPhotosDao
-import com.example.facedetectionusingmlkit.data.entity.GalleryPhotoEntity
+import com.example.facedetectionusingmlkit.data.local.dao.FacesAndPhotosDao
+import com.example.facedetectionusingmlkit.data.local.entity.GalleryPhotoEntity
 import kotlinx.coroutines.flow.Flow
 
 class MyRepository(

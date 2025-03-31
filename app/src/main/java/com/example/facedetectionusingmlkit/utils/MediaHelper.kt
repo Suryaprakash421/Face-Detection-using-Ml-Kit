@@ -3,7 +3,7 @@ package com.example.facedetectionusingmlkit.utils
 import android.content.ContentUris
 import android.content.Context
 import android.provider.MediaStore
-import com.example.facedetectionusingmlkit.data.entity.GalleryPhotoEntity
+import com.example.facedetectionusingmlkit.data.local.entity.GalleryPhotoEntity
 
 fun getGalleryPhotos(context: Context): List<GalleryPhotoEntity> {
     val galleryPhotos = mutableListOf<GalleryPhotoEntity>()

@@ -1,4 +1,4 @@
-package com.example.facedetectionusingmlkit
+package com.example.facedetectionusingmlkit.ui.components
 
 import android.util.Log
 import androidx.compose.material.icons.Icons

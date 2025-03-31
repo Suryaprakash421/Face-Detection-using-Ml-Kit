@@ -1,10 +1,10 @@
-package com.example.facedetectionusingmlkit.data.dao
+package com.example.facedetectionusingmlkit.data.local.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import com.example.facedetectionusingmlkit.data.entity.GalleryPhotoEntity
+import com.example.facedetectionusingmlkit.data.local.entity.GalleryPhotoEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao

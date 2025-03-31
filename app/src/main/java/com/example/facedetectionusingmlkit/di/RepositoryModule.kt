@@ -1,7 +1,7 @@
 package com.example.facedetectionusingmlkit.di
 
-import com.example.facedetectionusingmlkit.data.dao.FacesAndPhotosDao
-import com.example.facedetectionusingmlkit.repositories.MyRepository
+import com.example.facedetectionusingmlkit.data.local.dao.FacesAndPhotosDao
+import com.example.facedetectionusingmlkit.data.repositories.MyRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

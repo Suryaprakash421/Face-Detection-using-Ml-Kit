@@ -1,4 +1,4 @@
-package com.example.facedetectionusingmlkit.data.entity
+package com.example.facedetectionusingmlkit.data.local.entity
 
 import androidx.room.Entity
 import androidx.room.ForeignKey

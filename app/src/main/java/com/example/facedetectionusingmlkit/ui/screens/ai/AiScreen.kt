@@ -1,4 +1,4 @@
-package com.example.facedetectionusingmlkit.screens
+package com.example.facedetectionusingmlkit.ui.screens.ai
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column

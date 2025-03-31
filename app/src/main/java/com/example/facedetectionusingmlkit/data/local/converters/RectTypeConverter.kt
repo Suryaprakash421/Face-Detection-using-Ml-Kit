@@ -1,4 +1,4 @@
-package com.example.facedetectionusingmlkit.data.converters
+package com.example.facedetectionusingmlkit.data.local.converters
 
 import android.graphics.Rect
 import androidx.room.TypeConverter
