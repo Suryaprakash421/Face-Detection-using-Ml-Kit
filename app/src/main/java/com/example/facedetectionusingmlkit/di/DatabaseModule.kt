@@ -1,8 +1,10 @@
 package com.example.facedetectionusingmlkit.di
 
 import android.content.Context
+import android.content.SharedPreferences
 import androidx.room.Room
 import com.example.facedetectionusingmlkit.data.FaceDetectionDatabase
+import com.example.facedetectionusingmlkit.data.PrefManager
 import com.example.facedetectionusingmlkit.data.dao.FacesAndPhotosDao
 import dagger.Module
 import dagger.Provides
@@ -32,5 +34,17 @@ object DatabaseModule {
     @Singleton
     fun provideFacesAndPhotosDao(faceDetectionDatabase: FaceDetectionDatabase): FacesAndPhotosDao {
         return faceDetectionDatabase.facePhotoDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideSharedPreference(@ApplicationContext context: Context): SharedPreferences {
+        return context.getSharedPreferences("face_db", Context.MODE_PRIVATE)
+    }
+
+    @Provides
+    @Singleton
+    fun providePrefManager(sharedPreferences: SharedPreferences): PrefManager {
+        return PrefManager(sharedPreferences)
     }
 }
