@@ -18,11 +18,17 @@ class FaceDetectionWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result {
         return try {
-            Log.d("FaceDetectionWorker", "Worker started with repository: $")
+            startFaceDetection()
             Result.success()
         } catch (e: Exception) {
             Log.e("FaceDetectionWorker", "Exception: ${e.message}")
             Result.failure()
         }
+    }
+
+    private fun startFaceDetection() {
+        Log.d("FaceDetectionWorker", "Worker started with repository: $")
+//        val galleryPhotos =
+
     }
 }

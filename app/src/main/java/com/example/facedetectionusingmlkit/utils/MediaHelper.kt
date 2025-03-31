@@ -5,49 +5,52 @@ import android.content.Context
 import android.provider.MediaStore
 import com.example.facedetectionusingmlkit.data.local.entity.GalleryPhotoEntity
 
-fun getGalleryPhotos(context: Context): List<GalleryPhotoEntity> {
-    val galleryPhotos = mutableListOf<GalleryPhotoEntity>()
+object MediaHelper {
 
-    val projection = arrayOf(
-        MediaStore.Images.Media._ID,
-        MediaStore.Images.Media.DISPLAY_NAME,
-        MediaStore.Images.Media.DATA, // File path (Deprecated in API 29+)
-        MediaStore.Images.Media.DATE_TAKEN
-    )
+    fun getGalleryPhotos(context: Context): List<GalleryPhotoEntity> {
+        val galleryPhotos = mutableListOf<GalleryPhotoEntity>()
 
-    val sortOrder = "${MediaStore.Images.Media.DATE_TAKEN} DESC"
+        val projection = arrayOf(
+            MediaStore.Images.Media._ID,
+            MediaStore.Images.Media.DISPLAY_NAME,
+            MediaStore.Images.Media.DATA, // File path (Deprecated in API 29+)
+            MediaStore.Images.Media.DATE_TAKEN
+        )
 
-    val queryUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+        val sortOrder = "${MediaStore.Images.Media.DATE_TAKEN} DESC"
 
-    context.contentResolver.query(
-        queryUri, projection, null, null, sortOrder
-    )?.use { cursor ->
-        val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
-        val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DISPLAY_NAME)
-        val pathColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA)
-        val dateColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_TAKEN)
+        val queryUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
 
-        while (cursor.moveToNext()) {
-            val id = cursor.getLong(idColumn)
-            val name = cursor.getString(nameColumn)
-            val path = cursor.getString(pathColumn)
-            val dateTaken = cursor.getLong(dateColumn)
+        context.contentResolver.query(
+            queryUri, projection, null, null, sortOrder
+        )?.use { cursor ->
+            val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
+            val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DISPLAY_NAME)
+            val pathColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA)
+            val dateColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_TAKEN)
 
-            val fileUri = ContentUris.withAppendedId(queryUri, id)
+            while (cursor.moveToNext()) {
+                val id = cursor.getLong(idColumn)
+                val name = cursor.getString(nameColumn)
+                val path = cursor.getString(pathColumn)
+                val dateTaken = cursor.getLong(dateColumn)
 
-            galleryPhotos.add(
-                GalleryPhotoEntity(
-                    id = 0, // Room will auto-generate this
-                    fileUri = fileUri,
-                    photoName = name,
-                    filePath = path,
-                    capturedDate = dateTaken,
-                    isProcessed = false,
-                    noOfFaces = 0
+                val fileUri = ContentUris.withAppendedId(queryUri, id)
+
+                galleryPhotos.add(
+                    GalleryPhotoEntity(
+                        id = 0, // Room will auto-generate this
+                        fileUri = fileUri,
+                        photoName = name,
+                        filePath = path,
+                        capturedDate = dateTaken,
+                        isProcessed = false,
+                        noOfFaces = 0
+                    )
                 )
-            )
+            }
         }
-    }
 
-    return galleryPhotos
+        return galleryPhotos
+    }
 }

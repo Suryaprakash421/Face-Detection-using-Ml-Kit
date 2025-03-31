@@ -13,6 +13,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -24,7 +25,6 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.facedetectionusingmlkit.ui.components.GridPhotoView
 import com.example.facedetectionusingmlkit.viewmodel.MyViewModel
-import com.example.facedetectionusingmlkit.utils.getGalleryPhotos
 
 @Composable
 fun HomeScreen(modifier: Modifier = Modifier) {
@@ -33,16 +33,19 @@ fun HomeScreen(modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun CheckPermission(modifier: Modifier = Modifier, myViewModel: MyViewModel = hiltViewModel()) {
-    val context = LocalContext.current
-    RequestMediaPermissions() { isGranted ->
-        Log.d("isGranted", "isGranted: $isGranted")
-        if (isGranted) {
-            val galleryPhotos = getGalleryPhotos(context)
-            Log.d("isGranted", "galleryPhotos: ${galleryPhotos.size}")
+fun CheckPermission(myViewModel: MyViewModel = hiltViewModel()) {
+    val galleryPhotos = myViewModel.localImages.collectAsState().value
+
+    LaunchedEffect(galleryPhotos) {
+        Log.i("isGranted", "galleryPhotos: ${galleryPhotos.size}")
+        if (galleryPhotos.isNotEmpty()) {
             myViewModel.insertGalleryImages(galleryPhotos)
         }
-
+    }
+    RequestMediaPermissions { isGranted ->
+        if (isGranted) {
+            myViewModel.getLocalImages()
+        }
     }
 }
 
