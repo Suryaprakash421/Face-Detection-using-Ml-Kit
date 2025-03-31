@@ -49,6 +49,9 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+    kapt {
+        correctErrorTypes = true
+    }
 }
 
 dependencies {
@@ -79,6 +82,8 @@ dependencies {
     implementation(libs.androidx.hilt.navigation.compose)
     implementation(libs.hilt.android)
     kapt(libs.hilt.compiler)
+    implementation(libs.androidx.hilt.work)
+    kapt (libs.androidx.hilt.compiler)
 
     // Gson
     implementation(libs.gson)
@@ -88,4 +93,10 @@ dependencies {
 
     // Navigation
     implementation(libs.androidx.navigation.compose)
+
+    // ML kit
+    implementation(libs.face.detection)
+
+    // WorkManager
+    implementation(libs.androidx.work.runtime.ktx)
 }

@@ -3,6 +3,7 @@ package com.example.facedetectionusingmlkit.data.repositories
 import com.example.facedetectionusingmlkit.data.local.dao.FacesAndPhotosDao
 import com.example.facedetectionusingmlkit.data.local.entity.GalleryPhotoEntity
 import kotlinx.coroutines.flow.Flow
+import javax.inject.Inject
 
 class MyRepository(
     private val facesAndPhotosDao: FacesAndPhotosDao

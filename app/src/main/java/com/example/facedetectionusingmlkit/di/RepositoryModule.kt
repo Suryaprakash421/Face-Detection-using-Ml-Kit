@@ -13,7 +13,6 @@ import javax.inject.Singleton
 object RepositoryModule {
 
     @Provides
-    @Singleton
     fun provideMyRepository(facesAndPhotosDao: FacesAndPhotosDao): MyRepository {
         return MyRepository(facesAndPhotosDao)
     }

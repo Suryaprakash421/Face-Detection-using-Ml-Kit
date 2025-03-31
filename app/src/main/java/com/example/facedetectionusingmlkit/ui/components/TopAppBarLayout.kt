@@ -14,10 +14,12 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.facedetectionusingmlkit.viewmodel.MyViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TopAppBar(modifier: Modifier = Modifier) {
+fun TopAppBar(modifier: Modifier = Modifier, myViewModel: MyViewModel = hiltViewModel()) {
     CenterAlignedTopAppBar(
         title = { Text(text = "Face Detection", style = MaterialTheme.typography.titleLarge) },
         colors = TopAppBarDefaults.topAppBarColors(
@@ -25,7 +27,7 @@ fun TopAppBar(modifier: Modifier = Modifier) {
             titleContentColor = Color.White
         ),
         actions = {
-            IconButton(onClick = { handleRestart() }) {
+            IconButton(onClick = { handleRestart(myViewModel) }) {
                 Icon(
                     imageVector = Icons.Default.Refresh,
                     contentDescription = "Restart Worker",
@@ -49,7 +51,6 @@ private fun handleDelete() {
     Log.i("ButtonClick", "Delete clicked")
 }
 
-private fun handleRestart() {
-    Log.i("ButtonClick", "Restart clicked")
-
+private fun handleRestart(myViewModel: MyViewModel) {
+    myViewModel.startFaceDetectionWorker()
 }
