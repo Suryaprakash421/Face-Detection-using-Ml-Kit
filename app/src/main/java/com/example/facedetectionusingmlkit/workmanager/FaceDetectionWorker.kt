@@ -6,11 +6,14 @@ import android.graphics.BitmapFactory
 import android.graphics.drawable.BitmapDrawable
 import android.net.Uri
 import android.util.Log
+import androidx.core.graphics.drawable.toBitmap
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import coil.ImageLoader
+import coil.decode.DecodeUtils.calculateInSampleSize
 import coil.request.ImageRequest
+import com.bumptech.glide.Glide
 import com.example.facedetectionusingmlkit.data.local.PrefManager
 import com.example.facedetectionusingmlkit.data.repositories.MyRepository
 import com.example.facedetectionusingmlkit.utils.Config
@@ -25,6 +28,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
+import java.io.File
+import java.io.RandomAccessFile
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
@@ -54,7 +60,7 @@ class FaceDetectionWorker @AssistedInject constructor(
     }
 
     private val option = FaceDetectorOptions.Builder()
-        .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_FAST)
+        .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_ACCURATE)
         .setLandmarkMode(FaceDetectorOptions.LANDMARK_MODE_NONE)
         .build()
 
@@ -68,33 +74,27 @@ class FaceDetectionWorker @AssistedInject constructor(
         withContext(Dispatchers.Default) {
             galleryPhotos.chunked(Config.PARALLEL_COUNT).forEach { chunk ->
                 Log.d(MY_TAG, "chunked: ${chunk.size}")
-
-                val detectors = List(chunk.size) {
-                    FaceDetection.getClient(
-                        FaceDetectorOptions.Builder()
-                            .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_FAST)
-                            .build()
-                    )
-                }
-
                 measureTimeMillis {
                     chunk.mapIndexed { index, photo ->
                         Log.d(MY_TAG, "photoName: ${photo.photoName} -- $index")
                         async {
-                            val detector = detectors[index]
+
                             var bitmap: Bitmap?
                             measureTimeMillis {
+//                                bitmap = createBitmapFromFilePath(photo.filePath) ?: return@async
                                 bitmap = loadImageAsBitmap(photo.fileUri) ?: return@async
                             }.also {
-                                Log.i(MY_TAG, "Takes $it ms to create bitmap for ${photo.photoName}")
+                                Log.i(
+                                    MY_TAG,
+                                    "Takes $it ms to create bitmap for ${photo.photoName}"
+                                )
                             }
                             try {
-                                val faces = runMlKit(bitmap!!, 0, detector)
+                                val faces = runMlKit(bitmap!!, 0, faceDetector)
                                 Log.d(MY_TAG, "photoName: ${photo.photoName}, faces: ${faces.size}")
                                 updateProcessedPhoto(faces.size, photo.fileUri)
                             } finally {
                                 bitmap?.recycle()
-                                detector.close()
                                 bitmap = null
                             }
                         }
@@ -106,8 +106,84 @@ class FaceDetectionWorker @AssistedInject constructor(
                         "$it ms for ${chunk.size} -- avg time = ${prefManager.getAverageProcessedTime()} ms"
                     )
                 }
+                val mem = getMemoryUsageMB()
+                prefManager.addMemoryUsage(mem)
+//                detector.close()
             }
         }
+    }
+
+    /**
+     * Memory
+     * */
+    fun getMemoryUsageMB(): Double {
+        return try {
+            val reader = RandomAccessFile("/proc/self/statm", "r")
+            val memUsageKB =
+                reader.readLine().split(" ")[1].toLong() * 4 // Convert pages to KB (1 page = 4KB)
+            reader.close()
+
+            memUsageKB / 1024.0 // Convert to MB
+        } catch (e: Exception) {
+            e.printStackTrace()
+            -1.0
+        }
+    }
+
+    // Helper function to calculate inSampleSize for scaling
+    private fun calculateInSampleSize(
+        options: BitmapFactory.Options,
+        reqWidth: Int,
+        reqHeight: Int
+    ): Int {
+        // Raw height and width of the image
+        val height = options.outHeight
+        val width = options.outWidth
+        var inSampleSize = 1
+
+        if (height > reqHeight || width > reqWidth) {
+            val halfHeight = height / 2
+            val halfWidth = width / 2
+
+            // Calculate the largest inSampleSize value that is a power of 2
+            while (halfHeight / inSampleSize >= reqHeight && halfWidth / inSampleSize >= reqWidth) {
+                inSampleSize *= 2
+            }
+        }
+        return inSampleSize
+    }
+
+    suspend fun loadAndConvertToJpegBitmap(filePath: String): Bitmap? {
+        return try {
+            // Load image as Bitmap using Coil (supports HEIC, PNG, JPG, etc.)
+            val bitmap = ImageLoader(context)
+                .execute(
+                    ImageRequest.Builder(context)
+                        .data(File(filePath))
+                        .size(512) // Resize for performance
+                        .allowHardware(false) // Avoid GPU Bitmap (convertible)
+                        .bitmapConfig(Bitmap.Config.RGB_565)
+                        .build()
+                ).drawable?.toBitmap() ?: return null
+
+            // Convert to JPEG format Bitmap (in-memory)
+            val outputStream = ByteArrayOutputStream()
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 90, outputStream)
+
+            // Decode back to Bitmap to ensure it's in JPEG format
+            val jpegBitmap = BitmapFactory.decodeByteArray(
+                outputStream.toByteArray(),
+                0,
+                outputStream.size()
+            )
+            outputStream.close()
+
+            jpegBitmap
+        } catch (e: Exception) {
+            Log.e("ImageConversion", "Error converting image to JPEG Bitmap: ${e.message}")
+            null
+        }
+
     }
 
 
@@ -115,12 +191,31 @@ class FaceDetectionWorker @AssistedInject constructor(
         val imageLoader = ImageLoader(context)
         val request = ImageRequest.Builder(context)
             .data(photoUri)
-            .size(640, 640)
+            .size(512, 512)
             .allowHardware(true)
             .build()
 
         return (imageLoader.execute(request).drawable as? BitmapDrawable)?.bitmap
     }
+
+    /**
+     * Create bitmap for selected image using Glide
+     * */
+    private suspend fun createBitmapUsingGlide(filePath: String): Bitmap? =
+        withContext(Dispatchers.IO) {
+            return@withContext try {
+                val bitmap = Glide.with(context)
+                    .asBitmap()
+                    .load(File(filePath))
+                    .submit(640, 640)
+                    .get()
+
+                bitmap
+            } catch (e: Exception) {
+                Log.e("DetectedFace", "Exception while creating bitmap: ${e.message}")
+                null
+            }
+        }
 
     private suspend fun runMlKit(
         bitmap: Bitmap,

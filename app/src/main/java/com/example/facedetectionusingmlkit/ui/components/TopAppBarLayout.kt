@@ -65,6 +65,11 @@ fun TopAppBar(prefManager: PrefManager, myViewModel: MyViewModel = hiltViewModel
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold
             )
+            Text(
+                text = "Max memory: ${formatDoubt(prefManager.getMaxMemUsed())} MB",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold
+            )
         }
 
         Row(
@@ -88,6 +93,10 @@ fun TopAppBar(prefManager: PrefManager, myViewModel: MyViewModel = hiltViewModel
             }
         }
     }
+}
+
+private fun formatDoubt(input: Double): String {
+    return "%.2f".format(input)
 }
 
 private fun formatTime(time: Long): String {

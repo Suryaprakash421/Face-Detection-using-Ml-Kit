@@ -48,6 +48,7 @@ class MyViewModel @Inject constructor(
     fun resetGalleryTable() {
         viewModelScope.launch {
             prefManager.resetProcessedTime()
+            prefManager.resetMemUsage()
             myRepository.resetGalleryTable()
             workManager.cancelUniqueWork(FaceDetectionWorker.WORKER_NAME)
         }

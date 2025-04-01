@@ -91,6 +91,9 @@ dependencies {
     // Coil
     implementation(libs.coil.compose)
 
+    // Glide
+    implementation (libs.compose)
+
     // Navigation
     implementation(libs.androidx.navigation.compose)
 
