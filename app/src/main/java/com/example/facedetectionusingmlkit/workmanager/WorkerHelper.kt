@@ -10,7 +10,7 @@ fun WorkManager.startWorker() {
     Log.d("FaceDetectionWorker", "HELPER -- Entered")
 
     enqueueUniqueWork(
-        "face_detection_worker",
+        FaceDetectionWorker.WORKER_NAME,
         ExistingWorkPolicy.KEEP,
         workRequest
     )

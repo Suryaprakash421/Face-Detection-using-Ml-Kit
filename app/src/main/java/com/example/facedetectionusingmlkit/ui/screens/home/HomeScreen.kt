@@ -27,7 +27,7 @@ import com.example.facedetectionusingmlkit.ui.components.GridPhotoView
 import com.example.facedetectionusingmlkit.viewmodel.MyViewModel
 
 @Composable
-fun HomeScreen(modifier: Modifier = Modifier) {
+fun HomeScreen(modifier: Modifier = Modifier, myViewModel: MyViewModel = hiltViewModel()) {
     CheckPermission()
     GridPhotoView()
 }

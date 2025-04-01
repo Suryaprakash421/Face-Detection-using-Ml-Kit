@@ -5,8 +5,10 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.work.WorkManager
+import com.example.facedetectionusingmlkit.data.local.PrefManager
 import com.example.facedetectionusingmlkit.data.local.entity.GalleryPhotoEntity
 import com.example.facedetectionusingmlkit.data.repositories.MyRepository
+import com.example.facedetectionusingmlkit.workmanager.FaceDetectionWorker
 import com.example.facedetectionusingmlkit.workmanager.startWorker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -22,7 +24,8 @@ import javax.inject.Inject
 class MyViewModel @Inject constructor(
     application: Application,
     private val myRepository: MyRepository,
-    private val workManager: WorkManager
+    private val workManager: WorkManager,
+    private val prefManager: PrefManager
 ) : AndroidViewModel(application) {
 
     /**
@@ -36,6 +39,17 @@ class MyViewModel @Inject constructor(
     fun insertGalleryImages(galleryPhotoEntity: List<GalleryPhotoEntity>) {
         viewModelScope.launch(Dispatchers.IO) {
             myRepository.insertGalleryImages(galleryPhotoEntity)
+        }
+    }
+
+    /**
+     * Reset gallery Table
+     * */
+    fun resetGalleryTable() {
+        viewModelScope.launch {
+            prefManager.resetProcessedTime()
+            myRepository.resetGalleryTable()
+            workManager.cancelUniqueWork(FaceDetectionWorker.WORKER_NAME)
         }
     }
 
