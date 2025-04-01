@@ -186,19 +186,17 @@ class FaceDetectionWorker @AssistedInject constructor(
             Log.e("ImageConversion", "Error converting image to JPEG Bitmap: ${e.message}")
             null
         }
-
     }
 
-
-    private suspend fun loadImageAsBitmap(photoUri: Uri): Bitmap? {
+    private suspend fun loadImageAsBitmap(photoUri: Uri): Bitmap? = withContext(Dispatchers.IO) {
         val imageLoader = ImageLoader(context)
         val request = ImageRequest.Builder(context)
             .data(photoUri)
-            .size(512, 512)
-            .allowHardware(true)
+            .size(480, 360)
+            .allowHardware(false)
             .build()
 
-        return (imageLoader.execute(request).drawable as? BitmapDrawable)?.bitmap
+        return@withContext (imageLoader.execute(request).drawable as? BitmapDrawable)?.bitmap
     }
 
     /**

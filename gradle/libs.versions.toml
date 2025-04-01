@@ -1,6 +1,7 @@
 [versions]
 agp = "8.5.0"
 coilCompose = "2.6.0"
+coilHeif = "2.5.0"
 compose = "1.0.0-beta01"
 faceDetection = "16.1.7"
 gson = "2.10.1"
@@ -33,6 +34,7 @@ androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "roomRunt
 androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "roomRuntime" }
 androidx-work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "workRuntimeKtx" }
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coilCompose" }
+coil-heif = { module = "io.coil-kt:coil-heif", version.ref = "coilHeif" }
 compose = { module = "com.github.bumptech.glide:compose", version.ref = "compose" }
 face-detection = { module = "com.google.mlkit:face-detection", version.ref = "faceDetection" }
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }

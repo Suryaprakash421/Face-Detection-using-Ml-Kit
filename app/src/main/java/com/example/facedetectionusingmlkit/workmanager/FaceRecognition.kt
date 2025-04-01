@@ -2,6 +2,7 @@ package com.example.facedetectionusingmlkit.workmanager
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.Matrix
 import android.graphics.Rect
 import android.net.Uri
 import android.util.Log
@@ -46,6 +47,9 @@ class FaceRecognition @Inject constructor(
 
         const val MAX_THRESHOLD = 0.8
         const val MIN_THRESHOLD = 0.6
+
+        const val MAX_PONT_FOR_DISTANCE = 1.2
+        const val MIN_PONT_FOR_DISTANCE = 1.0
     }
 
     init {
@@ -116,14 +120,22 @@ class FaceRecognition @Inject constructor(
                         }.also {
                             Log.i(MY_TAG, "Takes $it ms for crop the face")
                         }
+                        val alignedBitmap = if (face.headEulerAngleZ != 0f) {
+                            rotateBitmap(faceBitmap, face.headEulerAngleZ)
+                        } else {
+                            faceBitmap
+                        }
 
                         measureTimeMillis {
-                            val embedding = generateEmbedding(faceBitmap) ?: return@async
+                            val embedding =
+                                generateEmbedding(alignedBitmap)
+                                    ?: return@async
                             compareFaces(photoDetail, embedding, faceBitmap)
                         }.also {
                             Log.d(MY_TAG, "Takes $it ms for generate one embedding")
                         }
                         faceBitmap.recycle()
+                        alignedBitmap.recycle()
                     }
                 }.awaitAll()
             }.also {
@@ -133,6 +145,26 @@ class FaceRecognition @Inject constructor(
             Log.e(MY_TAG, "Exception: ${e.message}")
         }
     }
+
+    fun normalizeBitmap(bitmap: Bitmap): FloatArray {
+        val width = bitmap.width
+        val height = bitmap.height
+        val pixels = IntArray(width * height)
+        bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+
+        val normalizedPixels = FloatArray(width * height * 3)
+        var index = 0
+        for (pixel in pixels) {
+            val r = (pixel shr 16 and 0xFF) / 255.0f
+            val g = (pixel shr 8 and 0xFF) / 255.0f
+            val b = (pixel and 0xFF) / 255.0f
+            normalizedPixels[index++] = r
+            normalizedPixels[index++] = g
+            normalizedPixels[index++] = b
+        }
+        return normalizedPixels
+    }
+
 
     private suspend fun insertPhotoDetails(photoDetail: PhotosEntity) {
         myRepository.insertPhoto(photoDetail)
@@ -160,7 +192,8 @@ class FaceRecognition @Inject constructor(
             "sameFaceList size: ${sameFaceList.size}, similarFaceList: ${similarFaceList.size}"
         )
 
-        sameFaceList.maxByOrNull { it.similarity }?.let { sameFaceData ->
+        sameFaceList.minByOrNull { it.similarity }?.let { sameFaceData ->
+//        sameFaceList.maxByOrNull { it.similarity }?.let { sameFaceData ->
             handleSameFace(sameFaceData, photoDetail)
         } ?: handleNewFace(
             currentEmbedding,
@@ -302,6 +335,18 @@ class FaceRecognition @Inject constructor(
         } else 0f
     }
 
+    /**
+     * Compare with Euclidean distance
+     * */
+    private fun euclideanDistance(embedding1: FloatArray, embedding2: FloatArray): Float {
+        var sumSquaredDifferences = 0f
+        for (i in embedding1.indices) {
+            val diff = embedding1[i] - embedding2[i]
+            sumSquaredDifferences += diff * diff
+        }
+        return sqrt(sumSquaredDifferences)
+    }
+
     private val outputArray =
         Array(1) { FloatArray(512) }
 
@@ -388,5 +433,20 @@ class FaceRecognition @Inject constructor(
         val right = (originalBox.right + padding).coerceAtMost(imageWidth)
         val bottom = (originalBox.bottom + padding).coerceAtMost(imageHeight)
         return Rect(left, top, right, bottom)
+    }
+
+    /**
+     * Rotate image bitmap
+     * */
+    private fun rotateBitmap(bitmap: Bitmap, degrees: Float): Bitmap {
+        val matrix = Matrix().apply { postRotate(degrees) }
+        return Bitmap.createBitmap(
+            bitmap,
+            0, 0,
+            bitmap.width,
+            bitmap.height,
+            matrix,
+            true
+        )
     }
 }
