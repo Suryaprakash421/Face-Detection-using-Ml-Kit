@@ -34,7 +34,7 @@ interface FacesAndPhotosDao {
     @Query("SELECT * FROM gallery_photo")
     fun getGalleryImageAsFlow(): Flow<List<GalleryPhotoEntity>>
 
-    @Query("SELECT * FROM gallery_photo WHERE isProcessed = 0 ORDER BY capturedDate DESC")
+    @Query("SELECT * FROM gallery_photo WHERE isProcessed = 0 ORDER BY capturedDate DESC LIMIT 1500")
     suspend fun getUnProcessedPhotos(): List<GalleryPhotoEntity>
 
     @Query("UPDATE gallery_photo SET isProcessed = :isProcessed, noOfFaces = :faceCount WHERE fileUri = :photoUri")
