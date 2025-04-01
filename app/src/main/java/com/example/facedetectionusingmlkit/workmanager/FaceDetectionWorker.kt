@@ -11,7 +11,6 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import coil.ImageLoader
-import coil.decode.DecodeUtils.calculateInSampleSize
 import coil.request.ImageRequest
 import com.bumptech.glide.Glide
 import com.example.facedetectionusingmlkit.data.local.PrefManager
@@ -41,7 +40,8 @@ class FaceDetectionWorker @AssistedInject constructor(
     @Assisted private val context: Context,
     @Assisted private val workerParams: WorkerParameters,
     private val myRepository: MyRepository,
-    private val prefManager: PrefManager
+    private val prefManager: PrefManager,
+    private val faceRecognition: FaceRecognition
 ) : CoroutineWorker(context, workerParams) {
 
     companion object {
@@ -92,6 +92,9 @@ class FaceDetectionWorker @AssistedInject constructor(
                             try {
                                 val faces = runMlKit(bitmap!!, 0, faceDetector)
                                 Log.d(MY_TAG, "photoName: ${photo.photoName}, faces: ${faces.size}")
+                                if (faces.isNotEmpty()) {
+                                    faceRecognition.processDetectedFace(faces, bitmap!!, photo)
+                                }
                                 updateProcessedPhoto(faces.size, photo.fileUri)
                             } finally {
                                 bitmap?.recycle()

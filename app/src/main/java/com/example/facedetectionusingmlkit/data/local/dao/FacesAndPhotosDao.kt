@@ -5,7 +5,11 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
+import com.example.facedetectionusingmlkit.data.local.entity.FacesEntity
 import com.example.facedetectionusingmlkit.data.local.entity.GalleryPhotoEntity
+import com.example.facedetectionusingmlkit.data.local.entity.PhotoFaceRefEntity
+import com.example.facedetectionusingmlkit.data.local.entity.PhotosEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -26,4 +30,46 @@ interface FacesAndPhotosDao {
     @Query("UPDATE gallery_photo SET isProcessed = 0, noOfFaces = 0")
     suspend fun resetGalleryTable()
 
+    /**
+     * Observe faces table changes
+     * */
+    @Query("SELECT * FROM faces")
+    fun getFlowOfFacesEntity(): Flow<List<FacesEntity>>
+
+    /**
+     * Insert face detail
+     * */
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertFace(facesEntity: FacesEntity): Long
+
+    /**
+     * Insert photo detail
+     * */
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertPhoto(photosEntity: PhotosEntity): Long
+
+    /**
+     * Insert face and photo detail in faceAndPhoto entity
+     * */
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertFaceAndPhotoDetail(photoFacesEntity: PhotoFaceRefEntity): Long
+
+    /**
+     * Clear all tables
+     * */
+    @Query("DELETE FROM photos")
+    suspend fun clearPhotosTable()
+
+    @Query("DELETE FROM faces")
+    suspend fun clearFacesTable()
+
+    @Query("DELETE FROM photofaceref")
+    suspend fun clearPhotoFaceRefTable()
+
+    @Transaction
+    suspend fun clearAllTables() {
+        clearPhotoFaceRefTable()
+        clearFacesTable()
+        clearPhotosTable()
+    }
 }

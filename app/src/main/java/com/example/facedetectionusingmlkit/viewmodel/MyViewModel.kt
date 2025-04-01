@@ -50,6 +50,7 @@ class MyViewModel @Inject constructor(
             prefManager.resetProcessedTime()
             prefManager.resetMemUsage()
             myRepository.resetGalleryTable()
+            myRepository.clearAllTables()
             workManager.cancelUniqueWork(FaceDetectionWorker.WORKER_NAME)
         }
     }

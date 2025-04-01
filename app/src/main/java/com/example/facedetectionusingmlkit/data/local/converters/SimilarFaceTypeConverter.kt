@@ -11,35 +11,35 @@ class SimilarFaceTypeConverter {
     private val gson = Gson()
 
     @TypeConverter
-    fun fromSimilarFaceWithSimilarity(value: SimilarFaceWithSimilarity): String {
-        return gson.toJson(value)
+    fun fromSimilarFaceWithSimilarity(value: SimilarFaceWithSimilarity?): String {
+        return gson.toJson(value ?: SimilarFaceWithSimilarity(UUID.randomUUID(), 0f))
     }
 
     @TypeConverter
-    fun toSimilarFaceWithSimilarity(value: String): SimilarFaceWithSimilarity {
+    fun toSimilarFaceWithSimilarity(value: String?): SimilarFaceWithSimilarity {
         return gson.fromJson(value, object : TypeToken<SimilarFaceWithSimilarity>() {}.type)
+            ?: SimilarFaceWithSimilarity(UUID.randomUUID(), 0f)
     }
 
-    // ✅ NEW: Convert List<SimilarFaceWithSimilarity> to String
     @TypeConverter
     fun fromSimilarFaceList(value: List<SimilarFaceWithSimilarity>?): String {
-        return gson.toJson(value)
+        return gson.toJson(value ?: emptyList<SimilarFaceWithSimilarity>())
     }
 
-    // ✅ NEW: Convert String back to List<SimilarFaceWithSimilarity>
     @TypeConverter
-    fun toSimilarFaceList(value: String): List<SimilarFaceWithSimilarity> {
+    fun toSimilarFaceList(value: String?): List<SimilarFaceWithSimilarity> {
         return gson.fromJson(value, object : TypeToken<List<SimilarFaceWithSimilarity>>() {}.type)
+            ?: emptyList()
     }
 
     @TypeConverter
-    fun fromUUID(uuid: UUID): String {
-        return uuid.toString()
+    fun fromUUID(uuid: UUID?): String {
+        return uuid?.toString() ?: ""
     }
 
     @TypeConverter
-    fun toUUID(uuid: String): UUID {
-        return UUID.fromString(uuid)
+    fun toUUID(uuid: String?): UUID {
+        return if (uuid.isNullOrBlank()) UUID.randomUUID() else UUID.fromString(uuid)
     }
+
 }
-

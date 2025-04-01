@@ -2,8 +2,12 @@ package com.example.facedetectionusingmlkit.data.repositories
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import com.example.facedetectionusingmlkit.data.local.dao.FacesAndPhotosDao
+import com.example.facedetectionusingmlkit.data.local.entity.FacesEntity
 import com.example.facedetectionusingmlkit.data.local.entity.GalleryPhotoEntity
+import com.example.facedetectionusingmlkit.data.local.entity.PhotoFaceRefEntity
+import com.example.facedetectionusingmlkit.data.local.entity.PhotosEntity
 import com.example.facedetectionusingmlkit.utils.MediaHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -19,6 +23,7 @@ class MyRepository(
      * Flow of Entity changes
      * */
     val galleryImages: Flow<List<GalleryPhotoEntity>> = facesAndPhotosDao.getGalleryImageAsFlow()
+    val faceListDetails: Flow<List<FacesEntity>> = facesAndPhotosDao.getFlowOfFacesEntity()
 
     /**
      * Insert gallery images
@@ -78,6 +83,51 @@ class MyRepository(
             } catch (e: Exception) {
                 e.printStackTrace()
             }
+        }
+    }
+
+    /**
+     * Insert New face details
+     * */
+    suspend fun insertFace(facesEntity: FacesEntity) {
+        try {
+            facesAndPhotosDao.insertFace(facesEntity)
+        } catch (e: Exception) {
+            Log.e("DataBaseError", "Exception: ${e.message}")
+            e.printStackTrace()
+        }
+    }
+
+    /**
+     * Insert New photo details
+     * */
+    suspend fun insertPhoto(photosEntity: PhotosEntity) {
+        try {
+            facesAndPhotosDao.insertPhoto(photosEntity)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    /**
+     * Insert New face details
+     * */
+    suspend fun insertFaceAndPhotoDetail(photoFaceRefEntity: PhotoFaceRefEntity) {
+        try {
+            facesAndPhotosDao.insertFaceAndPhotoDetail(photoFaceRefEntity)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    /**
+     * Clear all tables
+     * */
+    suspend fun clearAllTables() {
+        try {
+            facesAndPhotosDao.clearAllTables()
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 }
