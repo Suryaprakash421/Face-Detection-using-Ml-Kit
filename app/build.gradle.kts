@@ -83,7 +83,7 @@ dependencies {
     implementation(libs.hilt.android)
     kapt(libs.hilt.compiler)
     implementation(libs.androidx.hilt.work)
-    kapt (libs.androidx.hilt.compiler)
+    kapt(libs.androidx.hilt.compiler)
 
     // Gson
     implementation(libs.gson)
@@ -92,13 +92,18 @@ dependencies {
     implementation(libs.coil.compose)
 
     // Glide
-    implementation (libs.compose)
+    implementation(libs.compose)
 
     // Navigation
     implementation(libs.androidx.navigation.compose)
 
     // ML kit
     implementation(libs.face.detection)
+
+    // TF lite
+    implementation(libs.tensorflow.lite)
+    implementation(libs.tensorflow.lite.task.vision)
+    implementation(libs.tensorflow.lite.gpu)
 
     // WorkManager
     implementation(libs.androidx.work.runtime.ktx)

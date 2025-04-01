@@ -43,7 +43,7 @@ class PrefManager(
      * Reset processed time
      * */
     fun resetProcessedTime() {
-        sp.edit().putString(PROCESSED_TIMES, "0").apply()
+        sp.edit().putString(PROCESSED_TIMES, null).apply()
     }
 
     /**
@@ -74,7 +74,7 @@ class PrefManager(
      * Retrieves the Maximum mem used.
      */
     fun resetMemUsage() {
-        sp.edit().putString(MEM_USAGE, "0.0").apply()
+        sp.edit().putString(MEM_USAGE, null).apply()
     }
 
 }
