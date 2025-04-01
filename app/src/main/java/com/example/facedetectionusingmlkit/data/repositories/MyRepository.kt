@@ -12,6 +12,7 @@ import com.example.facedetectionusingmlkit.utils.MediaHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
+import java.util.UUID
 import javax.inject.Inject
 
 class MyRepository(
@@ -128,6 +129,18 @@ class MyRepository(
             facesAndPhotosDao.clearAllTables()
         } catch (e: Exception) {
             e.printStackTrace()
+        }
+    }
+
+    /**
+     * Clear all tables
+     * */
+    suspend fun getPhotosByFaceId(faceId: UUID): List<PhotosEntity> = withContext(Dispatchers.IO) {
+        try {
+            facesAndPhotosDao.getPhotosByFaceId(faceId)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
         }
     }
 }

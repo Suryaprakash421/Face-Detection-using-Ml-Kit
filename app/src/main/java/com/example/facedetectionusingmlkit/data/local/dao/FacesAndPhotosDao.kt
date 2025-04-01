@@ -11,9 +11,22 @@ import com.example.facedetectionusingmlkit.data.local.entity.GalleryPhotoEntity
 import com.example.facedetectionusingmlkit.data.local.entity.PhotoFaceRefEntity
 import com.example.facedetectionusingmlkit.data.local.entity.PhotosEntity
 import kotlinx.coroutines.flow.Flow
+import java.util.UUID
 
 @Dao
 interface FacesAndPhotosDao {
+
+    /**
+     *  Get photos which are all contains same face
+     *  */
+    @Query(
+        """
+        SELECT P.* FROM Photos P
+        JOIN PhotoFaceRef PF ON P.id = PF.photoId
+        WHERE PF.faceId = :faceId
+    """
+    )
+    suspend fun getPhotosByFaceId(faceId: UUID): List<PhotosEntity>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertGalleryPhotos(galleryPhotoEntity: List<GalleryPhotoEntity>)

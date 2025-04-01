@@ -152,6 +152,7 @@ class FaceRecognition @Inject constructor(
                 faceBitmap,
                 photoDetail
             )
+            return
         }
         val (sameFaceList, similarFaceList) = filteredFaces.partition { isSameFace(it.similarity) }
         Log.i(

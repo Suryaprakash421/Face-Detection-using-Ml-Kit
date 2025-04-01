@@ -60,7 +60,7 @@ class FaceDetectionWorker @AssistedInject constructor(
     }
 
     private val option = FaceDetectorOptions.Builder()
-        .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_ACCURATE)
+        .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_FAST)
         .setLandmarkMode(FaceDetectorOptions.LANDMARK_MODE_NONE)
         .build()
 

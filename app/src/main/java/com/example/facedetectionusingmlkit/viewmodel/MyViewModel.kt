@@ -8,6 +8,8 @@ import androidx.work.WorkManager
 import com.example.facedetectionusingmlkit.data.local.PrefManager
 import com.example.facedetectionusingmlkit.data.local.entity.GalleryPhotoEntity
 import com.example.facedetectionusingmlkit.data.repositories.MyRepository
+import com.example.facedetectionusingmlkit.domain.model.AiModel
+import com.example.facedetectionusingmlkit.domain.usecase.GetDetectedFaceUseCase
 import com.example.facedetectionusingmlkit.workmanager.FaceDetectionWorker
 import com.example.facedetectionusingmlkit.workmanager.startWorker
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -18,6 +20,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
+import java.util.UUID
 import javax.inject.Inject
 
 @HiltViewModel
@@ -25,13 +28,15 @@ class MyViewModel @Inject constructor(
     application: Application,
     private val myRepository: MyRepository,
     private val workManager: WorkManager,
-    private val prefManager: PrefManager
+    private val prefManager: PrefManager,
+    private val getDetectedFaceUseCase: GetDetectedFaceUseCase
 ) : AndroidViewModel(application) {
 
     /**
      * Flow of Entity changes
      * */
     val galleryImages: Flow<List<GalleryPhotoEntity>> = myRepository.galleryImages
+    val faceAndPhotoList: StateFlow<List<AiModel>> = getDetectedFaceUseCase.aiScreenData
 
     /**
      * Insert gallery images
@@ -76,4 +81,5 @@ class MyViewModel @Inject constructor(
             _localImages.value = images
         }
     }
+
 }
