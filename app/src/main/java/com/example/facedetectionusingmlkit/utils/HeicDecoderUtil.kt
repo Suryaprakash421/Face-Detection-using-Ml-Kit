@@ -14,12 +14,13 @@ import java.io.InputStream
 
 object HeicDecoderUtil {
     const val MY_TAG = "HeicDecoderUtil"
+
     /**
     Decode a HEIC or any image from URI.
     Uses hardware-accelerated ImageDecoder when possible, otherwise falls back to BitmapFactory for JPEG/PNG only.
      */
-    fun decodeBitmap(context: Context, uri: Uri, targetSize: Int? = null): Bitmap {
-        val mimeType = context.contentResolver.getType(uri)
+    fun decodeBitmap(context: Context, uri: Uri, targetSize: Int? = null): Bitmap? {
+        val mimeType = context.contentResolver.getType(uri) ?: return null
         Log.i(MY_TAG, "mimeType: $mimeType")
         return try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && mimeType?.contains("heic") == true) {
@@ -41,7 +42,7 @@ object HeicDecoderUtil {
                 decodeWithBitmapFactory(context.contentResolver, uri, targetSize)
             }
         } catch (e: Exception) {
-            Log.e("HeicDecoderUtil", "Fallback decode: ${e.message}")
+            Log.e("HeicDecoderUtil", "Fallback decode: ${e.message}, mimeType: $mimeType")
             decodeWithBitmapFactory(context.contentResolver, uri, targetSize)
         }
     }
@@ -50,7 +51,7 @@ object HeicDecoderUtil {
         resolver: ContentResolver,
         uri: Uri,
         targetSize: Int? = null
-    ): Bitmap {
+    ): Bitmap? {
         val options = BitmapFactory.Options()
         if (targetSize != null) {
             options.inJustDecodeBounds = true
@@ -60,9 +61,13 @@ object HeicDecoderUtil {
             options.inSampleSize = calculateInSampleSize(options, targetSize, targetSize)
             options.inJustDecodeBounds = false
         }
-        return resolver.openInputStream(uri)?.use {
-            BitmapFactory.decodeStream(it, null, options)!!
-        } ?: throw IllegalArgumentException("Cannot decode image: $uri")
+        return try {
+            resolver.openInputStream(uri)?.use {
+                BitmapFactory.decodeStream(it, null, options)!!
+            } ?: throw IllegalArgumentException("Cannot decode image: $uri")
+        } catch (e: Exception) {
+            null
+        }
     }
 
     private fun calculateInSampleSize(

@@ -296,10 +296,10 @@ fun Observation(
                 title = "Total time to process $totalPhotoCount photos",
                 value = formatTime(prefManager.getProcessedTimes().sum())
             )
-            TitleAndValue(
-                title = "Average time for ${Config.PARALLEL_COUNT} photos",
-                value = formatTime(prefManager.getAverageProcessedTime())
-            )
+//            TitleAndValue(
+//                title = "Average time for ${Config.PARALLEL_COUNT} photos",
+//                value = formatTime(prefManager.getAverageProcessedTime())
+//            )
             TitleAndValue(
                 title = "Average time for single photo",
                 value = formatTime(prefManager.getAverageProcessedTime() / Config.PARALLEL_COUNT)
