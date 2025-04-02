@@ -88,9 +88,10 @@ class MyViewModel @Inject constructor(
         viewModelScope.launch {
             workManager.getWorkInfosForUniqueWorkFlow(FaceDetectionWorker.WORKER_NAME)
                 .collectLatest { workInfo ->
-                    val state = workInfo[0].state
-                    Log.i("isWorkerRunning", "VIEW_MODEL -- state: $state")
-                    workerState.value = state
+                    if (workInfo.isNotEmpty()) { // Check if list is not empty
+                        val state = workInfo[0].state
+                        workerState.value = state
+                    }
                 }
         }
     }
