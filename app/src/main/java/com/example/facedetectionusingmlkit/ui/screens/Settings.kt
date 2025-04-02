@@ -278,12 +278,12 @@ fun Observation(
                 value = formatTime(prefManager.getAverageProcessedTime() / Config.PARALLEL_COUNT)
             )
             TitleAndValue(
-                title = "Average time for ${prefManager.getHeicProcessedTime().size} Heic photos",
-                value = formatTime(prefManager.getAverageHeicImageProcessedTime())
+                title = "Average time for Heic photo",
+                value = formatTime(prefManager.getAverageHeicImageProcessedTime()/Config.PARALLEL_COUNT)
             )
             TitleAndValue(
-                title = "Average time for ${prefManager.getNormalImageProcessedTime().size} Other photos",
-                value = formatTime(prefManager.getAverageNormalImageProcessedTime())
+                title = "Average time for Other photos",
+                value = formatTime(prefManager.getAverageNormalImageProcessedTime()/Config.PARALLEL_COUNT)
             )
             TitleAndValue(
                 title = "Maximum memory utilized",
