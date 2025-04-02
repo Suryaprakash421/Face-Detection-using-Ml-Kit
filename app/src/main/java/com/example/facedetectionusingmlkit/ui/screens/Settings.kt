@@ -35,6 +35,7 @@ import com.example.facedetectionusingmlkit.ui.components.HeadingText
 import com.example.facedetectionusingmlkit.ui.components.MyDropdownMenu
 import com.example.facedetectionusingmlkit.ui.components.MySlider
 import com.example.facedetectionusingmlkit.ui.components.MySwitch
+import com.example.facedetectionusingmlkit.utils.BitmapCreationMethod
 import com.example.facedetectionusingmlkit.utils.Config
 import com.example.facedetectionusingmlkit.utils.FaceDetectionMethods
 import com.example.facedetectionusingmlkit.utils.FormatHelper.formatTime
@@ -52,6 +53,24 @@ fun Settings(prefManager: PrefManager, myViewModel: MyViewModel = hiltViewModel(
     var isEditable by remember { mutableStateOf(false) }
 
     val scrollState = rememberScrollState()
+
+    val faceDetectionMode by remember {
+        mutableStateOf(myViewModel.faceDetectionMode)
+    }
+    var isFaceDetectionModeAccurate by remember {
+        mutableStateOf(prefManager.isFaceDetectionModeAccurate())
+    }
+    val defaultMode =
+        if (isFaceDetectionModeAccurate) faceDetectionMode[1] else faceDetectionMode[0]
+
+    val bitmapCreationOptions by remember {
+        mutableStateOf(myViewModel.bitmapCreationOption)
+    }
+    var isUseHeicDecoder by remember {
+        mutableStateOf(prefManager.isHeicDecoder())
+    }
+    val currentBitmapOption =
+        if (isUseHeicDecoder) bitmapCreationOptions[1] else bitmapCreationOptions[0]
 
     Column(
         modifier = Modifier
@@ -73,7 +92,24 @@ fun Settings(prefManager: PrefManager, myViewModel: MyViewModel = hiltViewModel(
         HorizontalDivider(color = Color.Black)
         Spacer(modifier = Modifier.height(20.dp))
 
-        ChangeFaceDetectionMode("Choose Face detection mode", enabled = !isAiEnabled, prefManager)
+        ChangeFaceDetectionMode(
+            "Choose Face detection mode",
+            enabled = !isAiEnabled,
+            options = faceDetectionMode,
+            default = defaultMode,
+        ) {
+            isFaceDetectionModeAccurate = it == FaceDetectionMethods.ACCURATE.name
+            prefManager.setIsFaceDetectionModeAccurate(isFaceDetectionModeAccurate)
+        }
+        ChangeFaceDetectionMode(
+            "Choose Bitmap creation option",
+            enabled = !isAiEnabled,
+            options = bitmapCreationOptions,
+            default = currentBitmapOption,
+        ) {
+            isUseHeicDecoder = it == BitmapCreationMethod.HEIC_DECODER.name
+            prefManager.setIsHeicDecoder(isUseHeicDecoder)
+        }
         Spacer(modifier = Modifier.height(10.dp))
 
         // Same face threshold
@@ -171,20 +207,12 @@ fun SettingAiToggle(title: String, isChecked: Boolean, onCheckedChange: (Boolean
 fun ChangeFaceDetectionMode(
     title: String,
     enabled: Boolean,
-    prefManager: PrefManager,
-    myViewModel: MyViewModel = hiltViewModel(),
-    modifier: Modifier = Modifier
+    default: String,
+    options: List<String>,
+    modifier: Modifier = Modifier,
+    onChange: (String) -> Unit
 ) {
 
-    val faceDetectionMode by remember {
-        mutableStateOf(myViewModel.faceDetectionMode)
-    }
-
-    var isFaceDetectionModeAccurate by remember {
-        mutableStateOf(prefManager.isFaceDetectionModeAccurate())
-    }
-    val defaultMode =
-        if (isFaceDetectionModeAccurate) faceDetectionMode[1] else faceDetectionMode[0]
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -196,13 +224,12 @@ fun ChangeFaceDetectionMode(
             fontWeight = FontWeight.Medium,
         )
         MyDropdownMenu(
-            options = faceDetectionMode,
+            options = options,
             enabled = enabled,
-            selected = defaultMode,
+            selected = default,
             modifier = Modifier.fillMaxWidth()
         ) {
-            isFaceDetectionModeAccurate = it == FaceDetectionMethods.ACCURATE.name
-            prefManager.setIsFaceDetectionModeAccurate(isFaceDetectionModeAccurate)
+            onChange(it)
             Log.i("OnChange", it)
         }
     }
@@ -279,11 +306,11 @@ fun Observation(
             )
             TitleAndValue(
                 title = "Average time for Heic photo",
-                value = formatTime(prefManager.getAverageHeicImageProcessedTime()/Config.PARALLEL_COUNT)
+                value = formatTime(prefManager.getAverageHeicImageProcessedTime() / Config.PARALLEL_COUNT)
             )
             TitleAndValue(
                 title = "Average time for Other photos",
-                value = formatTime(prefManager.getAverageNormalImageProcessedTime()/Config.PARALLEL_COUNT)
+                value = formatTime(prefManager.getAverageNormalImageProcessedTime() / Config.PARALLEL_COUNT)
             )
             TitleAndValue(
                 title = "Maximum memory utilized",
@@ -320,6 +347,17 @@ fun TitleAndValue(title: String, value: String, modifier: Modifier = Modifier) {
         fontWeight = FontWeight.Medium,
         modifier = Modifier.padding(0.dp, 1.dp)
     )
+}
+
+@Composable
+fun BitmapCreateOption(
+    title: String,
+    myViewModel: MyViewModel = hiltViewModel(),
+    modifier: Modifier = Modifier
+) {
+    val options by remember {
+        mutableStateOf(myViewModel.bitmapCreationOption)
+    }
 }
 
 private fun stopOrStartWorker(myViewModel: MyViewModel, isAiEnabled: Boolean) {

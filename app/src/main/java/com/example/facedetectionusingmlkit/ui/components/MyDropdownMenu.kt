@@ -27,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -41,18 +42,22 @@ fun MyDropdownMenu(
 ) {
     var expanded by remember { mutableStateOf(false) }
     var selectedOption by remember { mutableStateOf(selected) }
+    var buttonWidth by remember { mutableStateOf(0) }
 
     Box(
         modifier = modifier
             .fillMaxWidth()
             .padding(0.dp)
     ) {
-        Button(
+        OutlinedButton(
             onClick = { expanded = true },
             enabled = enabled,
+            shape = RoundedCornerShape(12.dp),
             modifier = modifier
                 .fillMaxWidth()
-                .border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(12.dp)),
+                .onGloballyPositioned { coordinates ->
+                    buttonWidth = coordinates.size.width
+                },
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color.Transparent, // Transparent background
                 contentColor = MaterialTheme.colorScheme.primary

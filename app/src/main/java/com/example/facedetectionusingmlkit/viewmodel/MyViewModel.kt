@@ -11,6 +11,7 @@ import com.example.facedetectionusingmlkit.data.local.entity.GalleryPhotoEntity
 import com.example.facedetectionusingmlkit.data.repositories.MyRepository
 import com.example.facedetectionusingmlkit.domain.model.AiModel
 import com.example.facedetectionusingmlkit.domain.usecase.GetDetectedFaceUseCase
+import com.example.facedetectionusingmlkit.utils.BitmapCreationMethod
 import com.example.facedetectionusingmlkit.utils.FaceDetectionMethods
 import com.example.facedetectionusingmlkit.workmanager.FaceDetectionWorker
 import com.example.facedetectionusingmlkit.workmanager.startWorker
@@ -37,6 +38,9 @@ class MyViewModel @Inject constructor(
 
     val faceDetectionMode =
         listOf(FaceDetectionMethods.FAST.name, FaceDetectionMethods.ACCURATE.name)
+
+    val bitmapCreationOption =
+        listOf(BitmapCreationMethod.COIL.name, BitmapCreationMethod.HEIC_DECODER.name)
 
     /**
      * Flow of Entity changes

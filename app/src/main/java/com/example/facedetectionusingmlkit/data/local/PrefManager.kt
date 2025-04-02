@@ -15,6 +15,7 @@ class PrefManager(
         private const val MIN_THRESHOLD = "minimum_threshold"
         private const val MIN_FACE_SIZE = "minimum_face_size"
         private const val FACE_DETECTION_MODE = "face_detection_mode"
+        private const val USE_HEIC_DECODER = "use_heic_decoder"
         private const val FACE_PADDING = "face_padding"
         private const val HEIC_IMAGE_PROCESS_TIME = "heic_image_time"
         private const val NORMAL_IMAGE_PROCESS_TIME = "normal_image_time"
@@ -144,6 +145,15 @@ class PrefManager(
     }
 
     fun isFaceDetectionModeAccurate(): Boolean = sp.getBoolean(FACE_DETECTION_MODE, false)
+
+    /**
+     * Set min face size to detect
+     * */
+    fun setIsHeicDecoder(isTrue: Boolean) {
+        sp.edit().putBoolean(USE_HEIC_DECODER, isTrue).apply()
+    }
+
+    fun isHeicDecoder(): Boolean = sp.getBoolean(USE_HEIC_DECODER, true)
 
     /**
      * Set face padding

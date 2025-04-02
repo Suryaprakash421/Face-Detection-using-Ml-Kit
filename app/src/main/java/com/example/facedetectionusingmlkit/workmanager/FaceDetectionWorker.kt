@@ -75,6 +75,7 @@ class FaceDetectionWorker @AssistedInject constructor(
         Log.d(MY_TAG, "Worker started")
         val galleryPhotos = myRepository.getUnProcessedPhotos()
 
+        val shouldUseHeicDecoder = prefManager.isHeicDecoder()
         Log.d(MY_TAG, "galleryPhotos: ${galleryPhotos.size}")
         withContext(Dispatchers.Default) {
             galleryPhotos.chunked(Config.PARALLEL_COUNT).forEach { chunk ->
@@ -86,12 +87,18 @@ class FaceDetectionWorker @AssistedInject constructor(
 
                             var bitmap: Bitmap?
                             measureTimeMillis {
-                                bitmap = HeicDecoderUtil.decodeBitmap(
-                                    context = context,
-                                    photo.fileUri,
-                                    512
-                                ) ?: return@async
-//                                bitmap = loadImageAsBitmap(photo.fileUri) ?: return@async
+                                bitmap = if (shouldUseHeicDecoder) {
+                                    Log.i(MY_TAG, "Inside Heic decoder")
+                                    HeicDecoderUtil.decodeBitmap(
+                                        context = context,
+                                        photo.fileUri,
+                                        512
+                                    )
+                                } else {
+                                    Log.i(MY_TAG, "Inside Coil bitmap creation")
+                                    loadImageAsBitmap(photo.fileUri)
+                                } ?: return@async
+
                             }.also {
                                 val mimeType = context.contentResolver.getType(photo.fileUri)
                                 prefManager.addSingleImageProcessTime(it, mimeType)
