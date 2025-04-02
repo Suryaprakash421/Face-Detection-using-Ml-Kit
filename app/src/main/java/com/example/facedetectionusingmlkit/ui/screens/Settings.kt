@@ -2,6 +2,7 @@ package com.example.facedetectionusingmlkit.ui.screens
 
 import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -9,6 +10,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -45,30 +48,38 @@ fun Settings(prefManager: PrefManager, myViewModel: MyViewModel = hiltViewModel(
     var minThreshHold by remember { mutableStateOf(prefManager.getMinThreshold()) }
     var minFaceSize by remember { mutableStateOf(prefManager.getMinFaceSize()) }
     var facePadding by remember { mutableStateOf(prefManager.getFacePadding()) }
+    var isEditable by remember { mutableStateOf(false) }
+
+    val scrollState = rememberScrollState()
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(14.dp)
+            .verticalScroll(scrollState),
     ) {
         SettingAiToggle(
             title = "Enable face detection",
             isChecked = isAiEnabled
         ) { isChecked ->
             isAiEnabled = isChecked
+            if (isChecked) {
+                isEditable = false
+            }
             stopOrStartWorker(myViewModel, isAiEnabled)
             prefManager.setAiEnabledState(isChecked)
         }
-        ChangeFaceDetectionMode("Choose Face detection mode: ", enabled = !isAiEnabled, prefManager)
-        Spacer(modifier = Modifier.height(10.dp))
         HorizontalDivider(color = Color.Black)
         Spacer(modifier = Modifier.height(20.dp))
+
+        ChangeFaceDetectionMode("Choose Face detection mode", enabled = !isAiEnabled, prefManager)
+        Spacer(modifier = Modifier.height(10.dp))
 
         // Same face threshold
         ThresholdRow(
             title = "Same face threshold",
             threshold = maxThreshHold,
-            enabled = !isAiEnabled
+            enabled = !isAiEnabled && isEditable
         ) {
             maxThreshHold = it
             prefManager.setMaxThreshold(it)
@@ -79,7 +90,7 @@ fun Settings(prefManager: PrefManager, myViewModel: MyViewModel = hiltViewModel(
         ThresholdRow(
             title = "Similar face threshold",
             threshold = minThreshHold,
-            enabled = !isAiEnabled
+            enabled = !isAiEnabled && isEditable
         ) {
             minThreshHold = it
             prefManager.setMinThreshold(it)
@@ -90,7 +101,7 @@ fun Settings(prefManager: PrefManager, myViewModel: MyViewModel = hiltViewModel(
         ThresholdRow(
             title = "Minimum face size",
             threshold = minFaceSize,
-            enabled = !isAiEnabled
+            enabled = !isAiEnabled && isEditable
         ) {
             minFaceSize = it
             prefManager.setMinFaceSize(it)
@@ -100,19 +111,46 @@ fun Settings(prefManager: PrefManager, myViewModel: MyViewModel = hiltViewModel(
         ThresholdRow(
             title = "Face padding",
             threshold = facePadding,
-            enabled = !isAiEnabled
+            enabled = !isAiEnabled && isEditable
         ) {
             facePadding = it
             prefManager.setFacePadding(it)
         }
-
         Spacer(modifier = Modifier.height(10.dp))
+
+        EditSetting(isEditable) {
+            isEditable = it
+            if (it) {
+                isAiEnabled = false
+                stopOrStartWorker(myViewModel, false)
+                prefManager.setAiEnabledState(false)
+            }
+        }
+        Spacer(modifier = Modifier.height(10.dp))
+
         HorizontalDivider(color = Color.Gray)
 
         Spacer(modifier = Modifier.height(10.dp))
         HeadingText(text = "Observations")
         Spacer(modifier = Modifier.height(10.dp))
         Observation(prefManager)
+    }
+}
+
+@Composable
+fun EditSetting(
+    isEditable: Boolean,
+    modifier: Modifier = Modifier,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(text = "Edit")
+            MySwitch(isChecked = isEditable, onChange = onCheckedChange)
+        }
     }
 }
 
@@ -229,6 +267,10 @@ fun Observation(
             TitleAndValue(
                 title = "Average time for ${Config.PARALLEL_COUNT} photos",
                 value = formatTime(prefManager.getAverageProcessedTime())
+            )
+            TitleAndValue(
+                title = "Average time for single photo",
+                value = formatTime(prefManager.getAverageProcessedTime() / Config.PARALLEL_COUNT)
             )
             TitleAndValue(
                 title = "Maximum memory utilized",
