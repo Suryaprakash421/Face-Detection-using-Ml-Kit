@@ -38,6 +38,7 @@ import com.example.facedetectionusingmlkit.ui.components.MySwitch
 import com.example.facedetectionusingmlkit.utils.Config
 import com.example.facedetectionusingmlkit.utils.FaceDetectionMethods
 import com.example.facedetectionusingmlkit.utils.FormatHelper.formatTime
+import com.example.facedetectionusingmlkit.utils.HeicDecoderUtil
 import com.example.facedetectionusingmlkit.utils.formatToDecimalPlaces
 import com.example.facedetectionusingmlkit.viewmodel.MyViewModel
 
@@ -258,6 +259,10 @@ fun Observation(
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Column {
+            TitleAndValue(
+                title = "Hardware decode support",
+                value = "${HeicDecoderUtil.isHeicHardwareDecodeSupported()}"
+            )
             TitleAndValue(title = "Total photos", value = totalPhotoCount.toString())
             TitleAndValue(title = "Processed photos", value = processedPhotoCount.toString())
             TitleAndValue(
@@ -271,6 +276,14 @@ fun Observation(
             TitleAndValue(
                 title = "Average time for single photo",
                 value = formatTime(prefManager.getAverageProcessedTime() / Config.PARALLEL_COUNT)
+            )
+            TitleAndValue(
+                title = "Average time for ${prefManager.getHeicProcessedTime().size} Heic photos",
+                value = formatTime(prefManager.getAverageHeicImageProcessedTime())
+            )
+            TitleAndValue(
+                title = "Average time for ${prefManager.getNormalImageProcessedTime().size} Other photos",
+                value = formatTime(prefManager.getAverageNormalImageProcessedTime())
             )
             TitleAndValue(
                 title = "Maximum memory utilized",

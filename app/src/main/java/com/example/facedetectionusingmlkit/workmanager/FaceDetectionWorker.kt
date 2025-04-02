@@ -16,6 +16,7 @@ import com.bumptech.glide.Glide
 import com.example.facedetectionusingmlkit.data.local.PrefManager
 import com.example.facedetectionusingmlkit.data.repositories.MyRepository
 import com.example.facedetectionusingmlkit.utils.Config
+import com.example.facedetectionusingmlkit.utils.HeicDecoderUtil
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.face.Face
 import com.google.mlkit.vision.face.FaceDetection
@@ -85,11 +86,18 @@ class FaceDetectionWorker @AssistedInject constructor(
 
                             var bitmap: Bitmap?
                             measureTimeMillis {
-                                bitmap = loadImageAsBitmap(photo.fileUri) ?: return@async
+                                bitmap = HeicDecoderUtil.decodeBitmap(
+                                    context = context,
+                                    photo.fileUri,
+                                    512
+                                ) ?: return@async
+//                                bitmap = loadImageAsBitmap(photo.fileUri) ?: return@async
                             }.also {
+                                val mimeType = context.contentResolver.getType(photo.fileUri)
+                                prefManager.addSingleImageProcessTime(it, mimeType)
                                 Log.i(
                                     MY_TAG,
-                                    "Takes $it ms to create bitmap for ${photo.photoName}"
+                                    "Takes $it ms to create bitmap for ${photo.photoName} -- mimeType: $mimeType"
                                 )
                             }
                             try {

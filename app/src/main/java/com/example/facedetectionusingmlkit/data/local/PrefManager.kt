@@ -16,6 +16,8 @@ class PrefManager(
         private const val MIN_FACE_SIZE = "minimum_face_size"
         private const val FACE_DETECTION_MODE = "face_detection_mode"
         private const val FACE_PADDING = "face_padding"
+        private const val HEIC_IMAGE_PROCESS_TIME = "heic_image_time"
+        private const val NORMAL_IMAGE_PROCESS_TIME = "normal_image_time"
     }
 
     /**
@@ -49,6 +51,8 @@ class PrefManager(
      * */
     fun resetProcessedTime() {
         sp.edit().putString(PROCESSED_TIMES, null).apply()
+        sp.edit().putString(NORMAL_IMAGE_PROCESS_TIME, null).apply()
+        sp.edit().putString(HEIC_IMAGE_PROCESS_TIME, null).apply()
     }
 
     /**
@@ -149,4 +153,54 @@ class PrefManager(
     }
 
     fun getFacePadding(): Float = sp.getFloat(FACE_PADDING, 0.07f)
+
+    /**
+     * Update the time taken for HEIC and Other images to create the bitmap
+     */
+    fun addSingleImageProcessTime(time: Long, mimeType: String?) {
+        if (mimeType?.contains("heic") == true) {
+            val timesList = getHeicProcessedTime().toMutableList()
+            timesList.add(time)
+            sp.edit().putString(HEIC_IMAGE_PROCESS_TIME, timesList.joinToString(",")).apply()
+        } else {
+            val timesList = getNormalImageProcessedTime().toMutableList()
+            timesList.add(time)
+            sp.edit().putString(NORMAL_IMAGE_PROCESS_TIME, timesList.joinToString(",")).apply()
+        }
+    }
+
+    /**
+     * Retrieves the list of stored HEIC images process time.
+     */
+    fun getHeicProcessedTime(): List<Long> {
+        val storedString = sp.getString(HEIC_IMAGE_PROCESS_TIME, null) ?: return emptyList()
+        return storedString.split(",").mapNotNull { it.toLongOrNull() }
+    }
+
+    /**
+     * Retrieves the list of stored Normal images process times.
+     */
+    fun getNormalImageProcessedTime(): List<Long> {
+        val storedString = sp.getString(NORMAL_IMAGE_PROCESS_TIME, null) ?: return emptyList()
+        return storedString.split(",").mapNotNull { it.toLongOrNull() }
+    }
+
+    /**
+     * Retrieves the average processed time for Normal images.
+     */
+    fun getAverageNormalImageProcessedTime(): Long {
+        val timesList = getNormalImageProcessedTime()
+        Log.i("timesList", "timesList: $timesList")
+        return if (timesList.isNotEmpty()) timesList.average().toLong() else 0L
+    }
+
+    /**
+     * Retrieves the average processed time for HEIC images.
+     */
+    fun getAverageHeicImageProcessedTime(): Long {
+        val timesList = getHeicProcessedTime()
+        Log.i("timesList", "timesList: $timesList")
+        return if (timesList.isNotEmpty()) timesList.average().toLong() else 0L
+    }
+
 }
