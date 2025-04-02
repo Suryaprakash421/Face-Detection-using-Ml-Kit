@@ -1,21 +1,25 @@
 package com.example.facedetectionusingmlkit.route
 
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.example.facedetectionusingmlkit.data.local.PrefManager
+import com.example.facedetectionusingmlkit.ui.screens.Settings
 import com.example.facedetectionusingmlkit.ui.screens.ai.AiScreen
 import com.example.facedetectionusingmlkit.ui.screens.home.HomeScreen
 
 @Composable
-fun MyNavigation(navController: NavHostController, modifier: Modifier = Modifier) {
+fun MyNavigation(navController: NavHostController, prefManager: PrefManager) {
     NavHost(navController = navController, startDestination = Home.route) {
-        composable(Home.route){
+        composable(Home.route) {
             HomeScreen()
         }
-        composable(FaceDetection.route) {
+        composable(Ai.route) {
             AiScreen()
+        }
+        composable(Settings.route) {
+            Settings(prefManager)
         }
     }
 }

@@ -59,9 +59,13 @@ class FaceDetectionWorker @AssistedInject constructor(
         }
     }
 
+    private val isFaceDetectionAccurate =
+        if (prefManager.isFaceDetectionModeAccurate()) FaceDetectorOptions.PERFORMANCE_MODE_ACCURATE else FaceDetectorOptions.PERFORMANCE_MODE_FAST
+
     private val option = FaceDetectorOptions.Builder()
-        .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_FAST)
+        .setPerformanceMode(isFaceDetectionAccurate)
         .setLandmarkMode(FaceDetectorOptions.LANDMARK_MODE_NONE)
+        .setMinFaceSize(prefManager.getMinFaceSize())
         .build()
 
     private val faceDetector by lazy { FaceDetection.getClient(option) }
@@ -81,7 +85,6 @@ class FaceDetectionWorker @AssistedInject constructor(
 
                             var bitmap: Bitmap?
                             measureTimeMillis {
-//                                bitmap = createBitmapFromFilePath(photo.filePath) ?: return@async
                                 bitmap = loadImageAsBitmap(photo.fileUri) ?: return@async
                             }.also {
                                 Log.i(

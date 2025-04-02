@@ -11,14 +11,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
-import com.example.facedetectionusingmlkit.route.FaceDetection
+import com.example.facedetectionusingmlkit.route.Ai
 import com.example.facedetectionusingmlkit.route.Home
+import com.example.facedetectionusingmlkit.route.Settings
 
 @Composable
 fun BottomBarNavigation(navController: NavController, modifier: Modifier = Modifier) {
     val destinationList = listOf(
         Home,
-        FaceDetection
+        Ai,
+        Settings
     )
 
     var selectedIndex by remember {

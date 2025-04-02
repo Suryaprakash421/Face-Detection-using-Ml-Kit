@@ -4,12 +4,14 @@ import android.app.Application
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.example.facedetectionusingmlkit.data.local.PrefManager
 import com.example.facedetectionusingmlkit.data.local.entity.GalleryPhotoEntity
 import com.example.facedetectionusingmlkit.data.repositories.MyRepository
 import com.example.facedetectionusingmlkit.domain.model.AiModel
 import com.example.facedetectionusingmlkit.domain.usecase.GetDetectedFaceUseCase
+import com.example.facedetectionusingmlkit.utils.FaceDetectionMethods
 import com.example.facedetectionusingmlkit.workmanager.FaceDetectionWorker
 import com.example.facedetectionusingmlkit.workmanager.startWorker
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -18,6 +20,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -31,6 +34,9 @@ class MyViewModel @Inject constructor(
     private val prefManager: PrefManager,
     private val getDetectedFaceUseCase: GetDetectedFaceUseCase
 ) : AndroidViewModel(application) {
+
+    val faceDetectionMode =
+        listOf(FaceDetectionMethods.FAST.name, FaceDetectionMethods.ACCURATE.name)
 
     /**
      * Flow of Entity changes
@@ -56,7 +62,7 @@ class MyViewModel @Inject constructor(
             prefManager.resetMemUsage()
             myRepository.resetGalleryTable()
             myRepository.clearAllTables()
-            workManager.cancelUniqueWork(FaceDetectionWorker.WORKER_NAME)
+            stopFaceDetectionWorker()
         }
     }
 
@@ -65,6 +71,28 @@ class MyViewModel @Inject constructor(
      * */
     fun startFaceDetectionWorker() {
         workManager.startWorker()
+    }
+
+    fun stopFaceDetectionWorker() {
+        workManager.cancelUniqueWork(FaceDetectionWorker.WORKER_NAME)
+    }
+
+    init {
+        observeWorkerState()
+    }
+
+    private var _workerState = MutableStateFlow<WorkInfo.State?>(null)
+    val workerState: MutableStateFlow<WorkInfo.State?> get() = _workerState
+
+    private fun observeWorkerState() {
+        viewModelScope.launch {
+            workManager.getWorkInfosForUniqueWorkFlow(FaceDetectionWorker.WORKER_NAME)
+                .collectLatest { workInfo ->
+                    val state = workInfo[0].state
+                    Log.i("isWorkerRunning", "VIEW_MODEL -- state: $state")
+                    workerState.value = state
+                }
+        }
     }
 
     /**

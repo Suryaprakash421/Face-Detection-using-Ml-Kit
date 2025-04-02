@@ -6,6 +6,7 @@ import android.graphics.Matrix
 import android.graphics.Rect
 import android.net.Uri
 import android.util.Log
+import com.example.facedetectionusingmlkit.data.local.PrefManager
 import com.example.facedetectionusingmlkit.data.local.entity.FacesEntity
 import com.example.facedetectionusingmlkit.data.local.entity.GalleryPhotoEntity
 import com.example.facedetectionusingmlkit.data.local.entity.PhotoFaceRefEntity
@@ -39,7 +40,8 @@ import kotlin.system.measureTimeMillis
 
 class FaceRecognition @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val myRepository: MyRepository
+    private val myRepository: MyRepository,
+    private val prefManager: PrefManager
 ) {
     companion object {
         private const val MODEL_NAME = "facenet_512_int_quantized.tflite"
@@ -115,7 +117,7 @@ class FaceRecognition @Inject constructor(
                             faceBitmap = cropFaceWithPadding(
                                 originalBitmap,
                                 face,
-                                (face.boundingBox.width() * 0.07).toInt()
+                                (face.boundingBox.width() * prefManager.getFacePadding()).toInt()
                             )
                         }.also {
                             Log.i(MY_TAG, "Takes $it ms for crop the face")
@@ -204,14 +206,14 @@ class FaceRecognition @Inject constructor(
     }
 
     private fun isSameFace(similarityValue: Float): Boolean =
-        similarityValue >= MAX_THRESHOLD
+        similarityValue >= prefManager.getMaxThreshold()
 
     private fun getSimilarEmbeddings(currentEmbedding: FloatArray): List<SimilarFaceWithSimilarity> {
         val result = mutableListOf<SimilarFaceWithSimilarity>()
         facesList.mapNotNull { face ->
             face.embedding?.let { refEmbedding ->
                 val similarity = cousinSimilarity(currentEmbedding, refEmbedding)
-                if (similarity >= MIN_THRESHOLD) {
+                if (similarity >= prefManager.getMinThreshold()) {
                     result.add(
                         SimilarFaceWithSimilarity(
                             face.id,
