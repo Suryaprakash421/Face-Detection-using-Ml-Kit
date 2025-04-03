@@ -302,7 +302,7 @@ fun Observation(
 //            )
             TitleAndValue(
                 title = "Average time for single photo",
-                value = formatTime(prefManager.getAverageProcessedTime() / Config.PARALLEL_COUNT)
+                value = formatTime(prefManager.getAverageProcessedTime() / Config.BATCH_SIZE)
             )
             TitleAndValue(
                 title = "Average time for Heic photo",

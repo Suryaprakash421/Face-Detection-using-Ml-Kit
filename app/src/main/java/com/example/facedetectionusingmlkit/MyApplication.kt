@@ -9,6 +9,7 @@ import coil.disk.DiskCache
 import coil.memory.MemoryCache
 import coil.request.CachePolicy
 import coil.util.DebugLogger
+import com.example.facedetectionusingmlkit.utils.Config
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 
@@ -17,6 +18,11 @@ class MyApplication : Application(), ImageLoaderFactory, Configuration.Provider 
 
     @Inject
     lateinit var workerFactory: HiltWorkerFactory
+
+    override fun onCreate() {
+        super.onCreate()
+        Config.initialize(this)
+    }
 
     override fun newImageLoader(): ImageLoader {
         return ImageLoader(this).newBuilder()

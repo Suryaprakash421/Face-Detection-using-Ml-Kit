@@ -52,9 +52,9 @@ class MyRepository(
     /**
      * Get gallery images from MediaStore
      * */
-    suspend fun getUnProcessedPhotos(): List<GalleryPhotoEntity> = withContext(Dispatchers.IO) {
+    suspend fun getUnProcessedPhotos(limit: Int): List<GalleryPhotoEntity> = withContext(Dispatchers.IO) {
         try {
-            facesAndPhotosDao.getUnProcessedPhotos()
+            facesAndPhotosDao.getUnProcessedPhotos(limit)
         } catch (e: Exception) {
             e.printStackTrace()
             emptyList()

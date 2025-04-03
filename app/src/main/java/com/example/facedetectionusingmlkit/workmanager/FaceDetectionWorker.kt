@@ -14,6 +14,7 @@ import coil.ImageLoader
 import coil.request.ImageRequest
 import com.bumptech.glide.Glide
 import com.example.facedetectionusingmlkit.data.local.PrefManager
+import com.example.facedetectionusingmlkit.data.local.entity.GalleryPhotoEntity
 import com.example.facedetectionusingmlkit.data.repositories.MyRepository
 import com.example.facedetectionusingmlkit.utils.Config
 import com.example.facedetectionusingmlkit.utils.HeicDecoderUtil
@@ -27,6 +28,7 @@ import dagger.assisted.AssistedInject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
@@ -56,12 +58,25 @@ class FaceDetectionWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result {
         return try {
-            val result = startFaceDetection()
-            if (result) {
-                Result.success()
-            } else {
-                Result.retry()
+            var iteration = 0
+            while (!isStopped) {
+                iteration++
+                val galleryImages = getImage(Config.BATCH_SIZE)
+                Log.i(MY_TAG, "iteration: $iteration with ${galleryImages.size}")
+                if (galleryImages.isEmpty()) {
+                    break
+                }
+                startFaceDetection(galleryImages)
+                delay(2000)
             }
+
+            return Result.success()
+//            val result = startFaceDetection(galleryImages)
+//            if (result) {
+//                Result.success()
+//            } else {
+//                Result.retry()
+//            }
         } catch (e: Exception) {
             Log.e(MY_TAG, "Error: ${e.message}, retrying...")
             Result.retry()
@@ -79,95 +94,98 @@ class FaceDetectionWorker @AssistedInject constructor(
 
     private val faceDetector by lazy { FaceDetection.getClient(option) }
 
-    private suspend fun startFaceDetection(): Boolean {
-        Log.d(MY_TAG, "Worker started")
-        val startTime = System.currentTimeMillis()
-        return try {
-            val galleryPhotos = myRepository.getUnProcessedPhotos()
+    private suspend fun getImage(batchSize: Int): List<GalleryPhotoEntity> {
+        return myRepository.getUnProcessedPhotos(batchSize)
+    }
 
+    private suspend fun startFaceDetection(galleryPhotos: List<GalleryPhotoEntity>): Boolean {
+        Log.d(MY_TAG, "Worker started with ${galleryPhotos.size} photos")
+
+        return try {
             val shouldUseHeicDecoder = prefManager.isHeicDecoder()
             Log.d(MY_TAG, "galleryPhotos: ${galleryPhotos.size}")
             withContext(Dispatchers.Default) {
-                galleryPhotos.chunked(Config.PARALLEL_COUNT).forEach { chunk ->
-                    var processed = 0
-                    measureTimeMillis {
-                        chunk.mapIndexed { index, photo ->
-                            Log.d(MY_TAG, "photoName: ${photo.photoName} -- $index")
-                            async {
-                                semaphore.withPermit {
+//                galleryPhotos.chunked(Config.BATCH_SIZE).forEach { chunk ->
+                var processed = 0
+                measureTimeMillis {
+                    galleryPhotos.mapIndexed { index, photo ->
+                        Log.d(MY_TAG, "photoName: ${photo.photoName} -- $index")
+                        async {
+                            semaphore.withPermit {
+                                measureTimeMillis {
+                                    processed += 1
+                                    Log.d(
+                                        MY_TAG,
+                                        "photoName: ${photo.photoName} inside semaphore"
+                                    )
+                                    var bitmap: Bitmap?
+                                    val mimeType =
+                                        context.contentResolver.getType(photo.fileUri)
                                     measureTimeMillis {
-                                        processed += 1
+                                        bitmap = if (shouldUseHeicDecoder) {
+                                            Log.i(MY_TAG, "Inside Heic decoder")
+                                            HeicDecoderUtil.decodeBitmap(
+                                                context = context,
+                                                photo.fileUri,
+                                                512
+                                            )
+                                        } else {
+                                            Log.i(MY_TAG, "Inside Coil bitmap creation")
+                                            loadImageAsBitmap(photo.fileUri)
+                                        } ?: run {
+                                            updateProcessedPhoto(0, photo.fileUri)
+                                            return@async
+                                        }
+
+                                    }.also {
+                                        prefManager.addSingleImageProcessTime(it, mimeType)
+                                        Log.i(
+                                            MY_TAG,
+                                            "Takes $it ms to create bitmap for ${photo.photoName} -- mimeType: $mimeType"
+                                        )
+                                    }
+                                    try {
+                                        val faces = runMlKit(bitmap!!, 0, faceDetector)
                                         Log.d(
                                             MY_TAG,
-                                            "photoName: ${photo.photoName} inside semaphore"
+                                            "photoName: ${photo.photoName}, faces: ${faces.size}"
                                         )
-                                        var bitmap: Bitmap?
-                                        val mimeType =
-                                            context.contentResolver.getType(photo.fileUri)
-                                        measureTimeMillis {
-                                            bitmap = if (shouldUseHeicDecoder) {
-                                                Log.i(MY_TAG, "Inside Heic decoder")
-                                                HeicDecoderUtil.decodeBitmap(
-                                                    context = context,
-                                                    photo.fileUri,
-                                                    512
-                                                )
-                                            } else {
-                                                Log.i(MY_TAG, "Inside Coil bitmap creation")
-                                                loadImageAsBitmap(photo.fileUri)
-                                            } ?: return@async
-
-                                        }.also {
-                                            prefManager.addSingleImageProcessTime(it, mimeType)
-                                            Log.i(
-                                                MY_TAG,
-                                                "Takes $it ms to create bitmap for ${photo.photoName} -- mimeType: $mimeType"
+                                        if (faces.isNotEmpty()) {
+                                            faceRecognition.processDetectedFace(
+                                                faces,
+                                                bitmap!!,
+                                                photo
                                             )
                                         }
-                                        try {
-                                            val faces = runMlKit(bitmap!!, 0, faceDetector)
-                                            Log.d(
-                                                MY_TAG,
-                                                "photoName: ${photo.photoName}, faces: ${faces.size}"
-                                            )
-                                            if (faces.isNotEmpty()) {
-                                                faceRecognition.processDetectedFace(
-                                                    faces,
-                                                    bitmap!!,
-                                                    photo
-                                                )
-                                            }
-                                            updateProcessedPhoto(faces.size, photo.fileUri)
-                                        } finally {
-                                            bitmap?.recycle()
-                                            bitmap = null
-                                        }
-                                    }.also {
-                                        val mem = getMemoryUsageMB()
-                                        prefManager.addMemoryUsage(mem)
+                                        updateProcessedPhoto(faces.size, photo.fileUri)
+                                    } finally {
+                                        bitmap?.recycle()
+                                        bitmap = null
                                     }
+                                }.also {
+                                    val mem = getMemoryUsageMB()
+                                    prefManager.addMemoryUsage(mem)
                                 }
                             }
-                        }.awaitAll()
-                    }.also {
-                        prefManager.addProcessedTime(it)
-                        Log.i(
-                            MY_TAG,
-                            "$it ms for ${chunk.size} photos-- avg time = ${prefManager.getAverageProcessedTime()} ms"
-                        )
-                    }
-                    val mem = getMemoryUsageMB()
-                    prefManager.addMemoryUsage(mem)
+                        }
+                    }.awaitAll()
+                }.also {
+                    prefManager.addProcessedTime(it)
+                    Log.i(
+                        MY_TAG,
+                        "$it ms for ${galleryPhotos.size} photos-- avg time = ${prefManager.getAverageProcessedTime()} ms"
+                    )
                 }
+//                }
             }
             true
         } catch (e: Exception) {
             Log.e(MY_TAG, "Exception in face detection: ${e.message}")
             false
         } finally {
-            val endTime = System.currentTimeMillis()
-            val difference = endTime - startTime
-            prefManager.addProcessedTime(difference)
+//            val endTime = System.currentTimeMillis()
+//            val difference = endTime - startTime
+//            prefManager.addProcessedTime(difference)
         }
     }
 
