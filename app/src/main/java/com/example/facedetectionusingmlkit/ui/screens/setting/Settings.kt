@@ -1,5 +1,6 @@
-package com.example.facedetectionusingmlkit.ui.screens
+package com.example.facedetectionusingmlkit.ui.screens.setting
 
+import android.icu.text.ListFormatter.Width
 import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -10,12 +11,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -25,6 +29,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -35,6 +40,7 @@ import com.example.facedetectionusingmlkit.ui.components.HeadingText
 import com.example.facedetectionusingmlkit.ui.components.MyDropdownMenu
 import com.example.facedetectionusingmlkit.ui.components.MySlider
 import com.example.facedetectionusingmlkit.ui.components.MySwitch
+import com.example.facedetectionusingmlkit.ui.components.MyTextField
 import com.example.facedetectionusingmlkit.utils.BitmapCreationMethod
 import com.example.facedetectionusingmlkit.utils.Config
 import com.example.facedetectionusingmlkit.utils.FaceDetectionMethods
@@ -110,6 +116,9 @@ fun Settings(prefManager: PrefManager, myViewModel: MyViewModel = hiltViewModel(
             isUseHeicDecoder = it == BitmapCreationMethod.HEIC_DECODER.name
             prefManager.setIsHeicDecoder(isUseHeicDecoder)
         }
+        Spacer(modifier = Modifier.height(10.dp))
+
+        WidthAndHeight(prefManager)
         Spacer(modifier = Modifier.height(10.dp))
 
         // Same face threshold
@@ -212,8 +221,6 @@ fun ChangeFaceDetectionMode(
     modifier: Modifier = Modifier,
     onChange: (String) -> Unit
 ) {
-
-
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -230,7 +237,6 @@ fun ChangeFaceDetectionMode(
             modifier = Modifier.fillMaxWidth()
         ) {
             onChange(it)
-            Log.i("OnChange", it)
         }
     }
 }
@@ -248,7 +254,7 @@ fun ThresholdRow(
         Row(modifier = Modifier.fillMaxWidth()) {
             Text(
                 buildAnnotatedString {
-                    append(title) // Normal text
+                    append(title)
                     append(": ")
                     withStyle(style = SpanStyle(color = Color.Blue, fontWeight = FontWeight.Bold)) {
                         append(threshold.formatToDecimalPlaces(2))
@@ -305,12 +311,16 @@ fun Observation(
                 value = formatTime(prefManager.getAverageProcessedTime() / Config.BATCH_SIZE)
             )
             TitleAndValue(
+                title = "Average time for face detection",
+                value = formatTime(prefManager.getAverageMlKitProcessedTime())
+            )
+            TitleAndValue(
                 title = "Average time for Heic photo",
-                value = formatTime(prefManager.getAverageHeicImageProcessedTime() / Config.PARALLEL_COUNT)
+                value = formatTime(prefManager.getAverageHeicImageProcessedTime())
             )
             TitleAndValue(
                 title = "Average time for Other photos",
-                value = formatTime(prefManager.getAverageNormalImageProcessedTime() / Config.PARALLEL_COUNT)
+                value = formatTime(prefManager.getAverageNormalImageProcessedTime())
             )
             TitleAndValue(
                 title = "Maximum memory utilized",
@@ -350,13 +360,47 @@ fun TitleAndValue(title: String, value: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun BitmapCreateOption(
-    title: String,
-    myViewModel: MyViewModel = hiltViewModel(),
-    modifier: Modifier = Modifier
-) {
-    val options by remember {
-        mutableStateOf(myViewModel.bitmapCreationOption)
+fun WidthAndHeight(prefManager: PrefManager, modifier: Modifier = Modifier) {
+    var width by remember { mutableIntStateOf(prefManager.getImageWidth()) }
+    var height by remember { mutableIntStateOf(prefManager.getImageHeight()) }
+    Row(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+//            Text(text = "Width")
+            MyTextField(
+                text = width.toString(),
+                label = "Width",
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+            ) { input ->
+                val newValue = input.toIntOrNull()
+                if (newValue != null) {
+                    width = newValue
+                    prefManager.setWidthAndHeight(newValue, false)
+                }
+            }
+        }
+        Spacer(Modifier.width(20.dp))
+        Row(
+            Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+//            Text(text = "Height")
+            MyTextField(
+                text = height.toString(),
+                label = "Height",
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+            ) { input ->
+                val newValue = input.toIntOrNull()
+                if (newValue != null) {
+                    height = newValue
+                    prefManager.setWidthAndHeight(newValue, true)
+                }
+            }
+        }
     }
 }
 

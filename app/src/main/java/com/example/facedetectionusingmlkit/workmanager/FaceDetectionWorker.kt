@@ -6,6 +6,7 @@ import android.graphics.BitmapFactory
 import android.graphics.drawable.BitmapDrawable
 import android.net.Uri
 import android.util.Log
+import android.util.Size
 import androidx.core.graphics.drawable.toBitmap
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
@@ -122,7 +123,7 @@ class FaceDetectionWorker @AssistedInject constructor(
                                             HeicDecoderUtil.decodeBitmap(
                                                 context = context,
                                                 photo.fileUri,
-                                                1080
+                                                Size(prefManager.getImageWidth(), prefManager.getImageHeight())
                                             )
                                         } else {
                                             Log.i(MY_TAG, "Inside Coil bitmap creation")
@@ -143,11 +144,16 @@ class FaceDetectionWorker @AssistedInject constructor(
                                     bitmap =
                                         bitmap?.copy(android.graphics.Bitmap.Config.ARGB_8888, true)
                                     try {
-                                        val faces = runMlKit(bitmap!!, 0, faceDetector)
-                                        Log.d(
-                                            MY_TAG,
-                                            "photoName: ${photo.photoName}, faces: ${faces.size}"
-                                        )
+                                        val faces: List<Face>
+                                        measureTimeMillis {
+                                            faces = runMlKit(bitmap!!, 0, faceDetector)
+                                        }.also {
+                                            Log.d(
+                                                MY_TAG,
+                                                "Takes $it ms for ${photo.photoName} -- face size: ${faces.size}"
+                                            )
+                                            prefManager.addMlProcessTime(it)
+                                        }
                                         if (faces.isNotEmpty()) {
                                             faceRecognition.processDetectedFace(
                                                 faces,

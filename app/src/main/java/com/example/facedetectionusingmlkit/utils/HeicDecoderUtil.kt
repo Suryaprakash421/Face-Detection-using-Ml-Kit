@@ -10,6 +10,7 @@ import android.media.MediaCodecInfo
 import android.net.Uri
 import android.os.Build
 import android.util.Log
+import android.util.Size
 import java.io.InputStream
 
 object HeicDecoderUtil {
@@ -19,7 +20,7 @@ object HeicDecoderUtil {
     Decode a HEIC or any image from URI.
     Uses hardware-accelerated ImageDecoder when possible, otherwise falls back to BitmapFactory for JPEG/PNG only.
      */
-    fun decodeBitmap(context: Context, uri: Uri, targetSize: Int? = null): Bitmap? {
+    fun decodeBitmap(context: Context, uri: Uri, targetSize: Size? = null): Bitmap? {
         val mimeType = context.contentResolver.getType(uri) ?: return null
         Log.i(MY_TAG, "mimeType: $mimeType")
         return try {
@@ -30,7 +31,8 @@ object HeicDecoderUtil {
                     ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
                         decoder.allocator = ImageDecoder.ALLOCATOR_HARDWARE
                         targetSize?.let {
-                            decoder.setTargetSize(it, it * info.size.height / info.size.width)
+                            decoder.setTargetSize(it.width, it.height)
+//                            decoder.setTargetSize(it, it * info.size.height / info.size.width)
                         }
                     }
                 } else {
@@ -50,7 +52,7 @@ object HeicDecoderUtil {
     private fun decodeWithBitmapFactory(
         resolver: ContentResolver,
         uri: Uri,
-        targetSize: Int? = null
+        targetSize: Size? = null
     ): Bitmap? {
         val options = BitmapFactory.Options()
         if (targetSize != null) {
@@ -58,7 +60,7 @@ object HeicDecoderUtil {
             resolver.openInputStream(uri)?.use {
                 BitmapFactory.decodeStream(it, null, options)
             }
-            options.inSampleSize = calculateInSampleSize(options, targetSize, targetSize)
+            options.inSampleSize = calculateInSampleSize(options, targetSize.width, targetSize.height)
             options.inJustDecodeBounds = false
         }
         return try {

@@ -2,6 +2,7 @@ package com.example.facedetectionusingmlkit.data.local
 
 import android.content.SharedPreferences
 import android.util.Log
+import androidx.core.content.edit
 
 class PrefManager(
     private val sp: SharedPreferences
@@ -19,6 +20,9 @@ class PrefManager(
         private const val FACE_PADDING = "face_padding"
         private const val HEIC_IMAGE_PROCESS_TIME = "heic_image_time"
         private const val NORMAL_IMAGE_PROCESS_TIME = "normal_image_time"
+        private const val ML_KIT_PROCESS_TIME = "ml_kit_process_time"
+        private const val IMAGE_WIDTH = "image_width"
+        private const val IMAGE_HEIGHT = "image_height"
     }
 
     /**
@@ -27,7 +31,7 @@ class PrefManager(
     fun addProcessedTime(time: Long) {
         val timesList = getProcessedTimes().toMutableList()
         timesList.add(time)
-        sp.edit().putString(PROCESSED_TIMES, timesList.joinToString(",")).apply()
+        sp.edit() { putString(PROCESSED_TIMES, timesList.joinToString(",")) }
     }
 
     /**
@@ -51,9 +55,9 @@ class PrefManager(
      * Reset processed time
      * */
     fun resetProcessedTime() {
-        sp.edit().putString(PROCESSED_TIMES, null).apply()
-        sp.edit().putString(NORMAL_IMAGE_PROCESS_TIME, null).apply()
-        sp.edit().putString(HEIC_IMAGE_PROCESS_TIME, null).apply()
+        sp.edit() { putString(PROCESSED_TIMES, null) }
+        sp.edit() { putString(NORMAL_IMAGE_PROCESS_TIME, null) }
+        sp.edit() { putString(HEIC_IMAGE_PROCESS_TIME, null) }
     }
 
     /**
@@ -62,7 +66,7 @@ class PrefManager(
     fun addMemoryUsage(mem: Double) {
         val memList = gddMemoryUsage().toMutableList()
         memList.add(mem)
-        sp.edit().putString(MEM_USAGE, memList.joinToString(",")).apply()
+        sp.edit() { putString(MEM_USAGE, memList.joinToString(",")) }
     }
 
     /**
@@ -98,14 +102,14 @@ class PrefManager(
      * Retrieves the Maximum mem used.
      */
     fun resetMemUsage() {
-        sp.edit().putString(MEM_USAGE, null).apply()
+        sp.edit() { putString(MEM_USAGE, null) }
     }
 
     /**
      * Get and set face detection enabled
      * */
     fun setAiEnabledState(isEnabled: Boolean) {
-        sp.edit().putBoolean(AI_ENABLED, isEnabled).apply()
+        sp.edit() { putBoolean(AI_ENABLED, isEnabled) }
     }
 
     fun getAiEnabledState(): Boolean = sp.getBoolean(AI_ENABLED, false)
@@ -114,7 +118,7 @@ class PrefManager(
      * Set max threshold
      * */
     fun setMaxThreshold(threshold: Float) {
-        sp.edit().putFloat(MAX_THRESHOLD, threshold).apply()
+        sp.edit() { putFloat(MAX_THRESHOLD, threshold) }
     }
 
     fun getMaxThreshold(): Float = sp.getFloat(MAX_THRESHOLD, 0.8f)
@@ -123,7 +127,7 @@ class PrefManager(
      * Set min threshold
      * */
     fun setMinThreshold(threshold: Float) {
-        sp.edit().putFloat(MIN_THRESHOLD, threshold).apply()
+        sp.edit() { putFloat(MIN_THRESHOLD, threshold) }
     }
 
     fun getMinThreshold(): Float = sp.getFloat(MIN_THRESHOLD, 0.6f)
@@ -132,7 +136,7 @@ class PrefManager(
      * Set min face size to detect
      * */
     fun setMinFaceSize(minSize: Float) {
-        sp.edit().putFloat(MIN_FACE_SIZE, minSize).apply()
+        sp.edit() { putFloat(MIN_FACE_SIZE, minSize) }
     }
 
     fun getMinFaceSize(): Float = sp.getFloat(MIN_FACE_SIZE, 0.5f)
@@ -141,7 +145,7 @@ class PrefManager(
      * Set min face size to detect
      * */
     fun setIsFaceDetectionModeAccurate(isFast: Boolean) {
-        sp.edit().putBoolean(FACE_DETECTION_MODE, isFast).apply()
+        sp.edit() { putBoolean(FACE_DETECTION_MODE, isFast) }
     }
 
     fun isFaceDetectionModeAccurate(): Boolean = sp.getBoolean(FACE_DETECTION_MODE, false)
@@ -150,7 +154,7 @@ class PrefManager(
      * Set min face size to detect
      * */
     fun setIsHeicDecoder(isTrue: Boolean) {
-        sp.edit().putBoolean(USE_HEIC_DECODER, isTrue).apply()
+        sp.edit() { putBoolean(USE_HEIC_DECODER, isTrue) }
     }
 
     fun isHeicDecoder(): Boolean = sp.getBoolean(USE_HEIC_DECODER, true)
@@ -159,7 +163,7 @@ class PrefManager(
      * Set face padding
      * */
     fun setFacePadding(minSize: Float) {
-        sp.edit().putFloat(FACE_PADDING, minSize).apply()
+        sp.edit() { putFloat(FACE_PADDING, minSize) }
     }
 
     fun getFacePadding(): Float = sp.getFloat(FACE_PADDING, 0.07f)
@@ -171,11 +175,11 @@ class PrefManager(
         if (mimeType?.contains("heic") == true) {
             val timesList = getHeicProcessedTime().toMutableList()
             timesList.add(time)
-            sp.edit().putString(HEIC_IMAGE_PROCESS_TIME, timesList.joinToString(",")).apply()
+            sp.edit() { putString(HEIC_IMAGE_PROCESS_TIME, timesList.joinToString(",")) }
         } else {
             val timesList = getNormalImageProcessedTime().toMutableList()
             timesList.add(time)
-            sp.edit().putString(NORMAL_IMAGE_PROCESS_TIME, timesList.joinToString(",")).apply()
+            sp.edit() { putString(NORMAL_IMAGE_PROCESS_TIME, timesList.joinToString(",")) }
         }
     }
 
@@ -213,4 +217,39 @@ class PrefManager(
         return if (timesList.isNotEmpty()) timesList.average().toLong() else 0L
     }
 
+    /**
+     * Add ml kit process time.
+     */
+    fun addMlProcessTime(time: Long) {
+        val timesList = getMlProcessTime().toMutableList()
+        timesList.add(time)
+        sp.edit() { putString(ML_KIT_PROCESS_TIME, timesList.joinToString(",")) }
+    }
+
+    /**
+     * Retrieves the list of ml process times.
+     */
+    private fun getMlProcessTime(): List<Long> {
+        val storedString = sp.getString(ML_KIT_PROCESS_TIME, null) ?: return emptyList()
+        return storedString.split(",").mapNotNull { it.toLongOrNull() }
+    }
+
+    /**
+     * Retrieves the average ml processed time.
+     */
+    fun getAverageMlKitProcessedTime(): Long {
+        val timesList = getMlProcessTime()
+        Log.i("timesList", "timesList: $timesList")
+        return if (timesList.isNotEmpty()) timesList.average().toLong() else 0L
+    }
+
+    /**
+     * Set image width and height
+     * */
+    fun setWidthAndHeight(size: Int, isHeight: Boolean){
+        sp.edit() { putInt(if (isHeight) IMAGE_HEIGHT else IMAGE_WIDTH, size) }
+    }
+
+    fun getImageWidth(): Int = sp.getInt(IMAGE_WIDTH, 512)
+    fun getImageHeight(): Int = sp.getInt(IMAGE_HEIGHT, 512)
 }
