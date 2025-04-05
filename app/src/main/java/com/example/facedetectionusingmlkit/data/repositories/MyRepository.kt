@@ -52,14 +52,15 @@ class MyRepository(
     /**
      * Get gallery images from MediaStore
      * */
-    suspend fun getUnProcessedPhotos(limit: Int): List<GalleryPhotoEntity> = withContext(Dispatchers.IO) {
-        try {
-            facesAndPhotosDao.getUnProcessedPhotos(limit)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            emptyList()
+    suspend fun getUnProcessedPhotos(limit: Int): List<GalleryPhotoEntity> =
+        withContext(Dispatchers.IO) {
+            try {
+                facesAndPhotosDao.getUnProcessedPhotos(limit)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                emptyList()
+            }
         }
-    }
 
     /**
      * Update isProcessed and face count
@@ -143,4 +144,29 @@ class MyRepository(
             emptyList()
         }
     }
+
+    /**
+     * Clear all tables
+     * */
+    suspend fun getPhotosByUriList(photoUris: List<Uri>): List<GalleryPhotoEntity> =
+        withContext(Dispatchers.IO) {
+            try {
+                facesAndPhotosDao.getPhotosByUriList(photoUris)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                emptyList()
+            }
+        }
+
+    /**
+     * Clear all tables
+     * */
+    suspend fun updateGalleryPhotos(photos: List<GalleryPhotoEntity>) =
+        withContext(Dispatchers.IO) {
+            try {
+                facesAndPhotosDao.updateGalleryPhotos(photos)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
 }

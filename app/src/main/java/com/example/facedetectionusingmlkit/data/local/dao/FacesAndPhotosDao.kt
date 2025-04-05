@@ -6,6 +6,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
+import androidx.room.Update
 import com.example.facedetectionusingmlkit.data.local.entity.FacesEntity
 import com.example.facedetectionusingmlkit.data.local.entity.GalleryPhotoEntity
 import com.example.facedetectionusingmlkit.data.local.entity.PhotoFaceRefEntity
@@ -85,4 +86,10 @@ interface FacesAndPhotosDao {
         clearFacesTable()
         clearPhotosTable()
     }
+
+    @Query("SELECT * FROM gallery_photo WHERE fileUri IN (:photoUri)")
+    suspend fun getPhotosByUriList(photoUri: List<Uri>): List<GalleryPhotoEntity>
+
+    @Update
+    suspend fun updateGalleryPhotos(photos: List<GalleryPhotoEntity>)
 }

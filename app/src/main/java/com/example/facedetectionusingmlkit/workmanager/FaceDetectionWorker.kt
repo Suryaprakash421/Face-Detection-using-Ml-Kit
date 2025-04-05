@@ -71,12 +71,6 @@ class FaceDetectionWorker @AssistedInject constructor(
             }
 
             return Result.success()
-//            val result = startFaceDetection(galleryImages)
-//            if (result) {
-//                Result.success()
-//            } else {
-//                Result.retry()
-//            }
         } catch (e: Exception) {
             Log.e(MY_TAG, "Error: ${e.message}, retrying...")
             Result.retry()
@@ -107,6 +101,7 @@ class FaceDetectionWorker @AssistedInject constructor(
             withContext(Dispatchers.Default) {
 //                galleryPhotos.chunked(Config.BATCH_SIZE).forEach { chunk ->
                 var processed = 0
+                val processedPhotos = mutableSetOf<Pair<Uri, Int>>()
                 measureTimeMillis {
                     galleryPhotos.mapIndexed { index, photo ->
                         Log.d(MY_TAG, "photoName: ${photo.photoName} -- $index")
@@ -127,13 +122,14 @@ class FaceDetectionWorker @AssistedInject constructor(
                                             HeicDecoderUtil.decodeBitmap(
                                                 context = context,
                                                 photo.fileUri,
-                                                512
+                                                1080
                                             )
                                         } else {
                                             Log.i(MY_TAG, "Inside Coil bitmap creation")
                                             loadImageAsBitmap(photo.fileUri)
                                         } ?: run {
-                                            updateProcessedPhoto(0, photo.fileUri)
+                                            processedPhotos.add(Pair(photo.fileUri, 0))
+//                                            updateProcessedPhoto(0, photo.fileUri)
                                             return@async
                                         }
 
@@ -144,6 +140,8 @@ class FaceDetectionWorker @AssistedInject constructor(
                                             "Takes $it ms to create bitmap for ${photo.photoName} -- mimeType: $mimeType"
                                         )
                                     }
+                                    bitmap =
+                                        bitmap?.copy(android.graphics.Bitmap.Config.ARGB_8888, true)
                                     try {
                                         val faces = runMlKit(bitmap!!, 0, faceDetector)
                                         Log.d(
@@ -157,7 +155,8 @@ class FaceDetectionWorker @AssistedInject constructor(
                                                 photo
                                             )
                                         }
-                                        updateProcessedPhoto(faces.size, photo.fileUri)
+                                        processedPhotos.add(Pair(photo.fileUri, faces.size))
+//                                        updateProcessedPhoto(faces.size, photo.fileUri)
                                     } finally {
                                         bitmap?.recycle()
                                         bitmap = null
@@ -169,6 +168,7 @@ class FaceDetectionWorker @AssistedInject constructor(
                             }
                         }
                     }.awaitAll()
+                    updateProcessedPhotos(processedPhotos)
                 }.also {
                     prefManager.addProcessedTime(it)
                     Log.i(
@@ -182,11 +182,20 @@ class FaceDetectionWorker @AssistedInject constructor(
         } catch (e: Exception) {
             Log.e(MY_TAG, "Exception in face detection: ${e.message}")
             false
-        } finally {
-//            val endTime = System.currentTimeMillis()
-//            val difference = endTime - startTime
-//            prefManager.addProcessedTime(difference)
         }
+    }
+
+    private suspend fun updateProcessedPhotos(processedPhotos: MutableSet<Pair<Uri, Int>>) {
+        val photoUris = processedPhotos.map { it.first }
+        val existingMap = myRepository.getPhotosByUriList(photoUris).associateBy { it.fileUri }
+
+        val updatedEntities = processedPhotos.mapNotNull { (uri, faceCount) ->
+            existingMap[uri]?.copy(
+                isProcessed = true,
+                noOfFaces = faceCount
+            )
+        }
+        myRepository.updateGalleryPhotos(updatedEntities)
     }
 
     /**

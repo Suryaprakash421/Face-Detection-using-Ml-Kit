@@ -16,7 +16,8 @@ object Config {
         this.context = context.applicationContext
     }
 
-    val PARALLEL_COUNT = Runtime.getRuntime().availableProcessors() - 2
+    const val PARALLEL_COUNT = 3
+//    val PARALLEL_COUNT = Runtime.getRuntime().availableProcessors() - 2
     val BATCH_SIZE = calculateBatchSize()
 
     const val FACES_FOLDER = "faces"

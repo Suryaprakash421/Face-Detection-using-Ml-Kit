@@ -61,10 +61,10 @@ class FaceRecognition @Inject constructor(
     private val options = Interpreter.Options().apply {
         addDelegate(NnApiDelegate())
         numThreads = 1
-//        useXNNPACK = true
+        useXNNPACK = true
     }
 
-    fun loadModelFile(): MappedByteBuffer {
+    private fun loadModelFile(): MappedByteBuffer {
         val assetFileDescriptor = context.assets.openFd(MODEL_NAME)
         val fileInputStream = FileInputStream(assetFileDescriptor.fileDescriptor)
         val fileChannel = fileInputStream.channel
