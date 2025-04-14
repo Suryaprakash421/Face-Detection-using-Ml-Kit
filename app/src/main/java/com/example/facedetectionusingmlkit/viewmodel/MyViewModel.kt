@@ -13,6 +13,7 @@ import com.example.facedetectionusingmlkit.domain.model.AiModel
 import com.example.facedetectionusingmlkit.domain.usecase.GetDetectedFaceUseCase
 import com.example.facedetectionusingmlkit.utils.BitmapCreationMethod
 import com.example.facedetectionusingmlkit.utils.FaceDetectionMethods
+import com.example.facedetectionusingmlkit.utils.Logger
 import com.example.facedetectionusingmlkit.workmanager.FaceDetectionWorker
 import com.example.facedetectionusingmlkit.workmanager.startWorker
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -66,6 +67,7 @@ class MyViewModel @Inject constructor(
             prefManager.resetMemUsage()
             myRepository.resetGalleryTable()
             myRepository.clearAllTables()
+            Logger.deleteLogFile()
             stopFaceDetectionWorker()
         }
     }

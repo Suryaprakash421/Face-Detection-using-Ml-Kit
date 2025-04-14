@@ -1,6 +1,7 @@
 package com.example.facedetectionusingmlkit.workmanager
 
 import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Matrix
 import android.graphics.Rect
@@ -14,6 +15,7 @@ import com.example.facedetectionusingmlkit.data.local.entity.PhotosEntity
 import com.example.facedetectionusingmlkit.data.local.entity.SimilarFaceWithSimilarity
 import com.example.facedetectionusingmlkit.data.repositories.MyRepository
 import com.example.facedetectionusingmlkit.utils.Config
+import com.example.facedetectionusingmlkit.utils.Logger
 import com.google.mlkit.vision.face.Face
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
@@ -24,6 +26,8 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import org.tensorflow.lite.Interpreter
+import org.tensorflow.lite.gpu.CompatibilityList
+import org.tensorflow.lite.gpu.GpuDelegate
 import org.tensorflow.lite.nnapi.NnApiDelegate
 import java.io.File
 import java.io.FileInputStream
@@ -58,10 +62,13 @@ class FaceRecognition @Inject constructor(
         observeFacesEntity()
     }
 
+    private val compatList = CompatibilityList()
     private val options = Interpreter.Options().apply {
-        addDelegate(NnApiDelegate())
-        numThreads = 1
-        useXNNPACK = true
+        if (compatList.isDelegateSupportedOnThisDevice) {
+            this.addDelegate(GpuDelegate(compatList.bestOptionsForThisDevice))
+        } else {
+            this.setNumThreads(4)
+        }
     }
 
     private fun loadModelFile(): MappedByteBuffer {
@@ -101,6 +108,10 @@ class FaceRecognition @Inject constructor(
     ) = coroutineScope {
         try {
             measureTimeMillis {
+                Logger.i(
+                    MY_TAG,
+                    "isDelegateSupportedOnThisDevice: ${compatList.isDelegateSupportedOnThisDevice}"
+                )
                 val photoDetail = PhotosEntity(
                     id = UUID.randomUUID(),
                     photoName = photo.photoName,
@@ -120,7 +131,8 @@ class FaceRecognition @Inject constructor(
                                 (face.boundingBox.width() * prefManager.getFacePadding()).toInt()
                             )
                         }.also {
-                            Log.i(MY_TAG, "Takes $it ms for crop the face")
+                            Logger.i(MY_TAG, "Takes $it ms for crop the face")
+
                         }
                         val alignedBitmap = if (face.headEulerAngleZ != 0f) {
                             rotateBitmap(faceBitmap, face.headEulerAngleZ)
@@ -129,22 +141,27 @@ class FaceRecognition @Inject constructor(
                         }
 
                         measureTimeMillis {
+                            val t1 = System.currentTimeMillis()
                             val embedding =
                                 generateEmbedding(alignedBitmap)
                                     ?: return@async
+                            Logger.i(
+                                MY_TAG,
+                                "Takes ${System.currentTimeMillis() - t1} ms for generate embedding"
+                            )
                             compareFaces(photoDetail, embedding, faceBitmap)
                         }.also {
-                            Log.d(MY_TAG, "Takes $it ms for generate one embedding")
+                            Logger.d(MY_TAG, "Takes $it ms for generate one embedding")
                         }
                         faceBitmap.recycle()
                         alignedBitmap.recycle()
                     }
                 }.awaitAll()
             }.also {
-                Log.i(MY_TAG, "Created embedding for ${faces.size} faces takes $it ms")
+                Logger.i(MY_TAG, "Created embedding for ${faces.size} faces takes $it ms")
             }
         } catch (e: Exception) {
-            Log.e(MY_TAG, "Exception: ${e.message}")
+            Logger.e(MY_TAG, "Exception: ${e.message}")
         }
     }
 
@@ -178,7 +195,8 @@ class FaceRecognition @Inject constructor(
         faceBitmap: Bitmap
     ) {
         val filteredFaces = getSimilarEmbeddings(currentEmbedding)
-        Log.i(MY_TAG, "filteredFaces size: ${filteredFaces.size}")
+        Logger.i(MY_TAG, "filteredFaces size: ${filteredFaces.size}")
+
 
         if (filteredFaces.isEmpty()) {
             handleNewFace(
@@ -189,7 +207,8 @@ class FaceRecognition @Inject constructor(
             return
         }
         val (sameFaceList, similarFaceList) = filteredFaces.partition { isSameFace(it.similarity) }
-        Log.i(
+        Logger.i(
+
             MY_TAG,
             "sameFaceList size: ${sameFaceList.size}, similarFaceList: ${similarFaceList.size}"
         )
@@ -233,7 +252,8 @@ class FaceRecognition @Inject constructor(
         refFace: SimilarFaceWithSimilarity,
         photoDetail: PhotosEntity,
     ) {
-        Log.d(MY_TAG, "Handle Same face")
+        Logger.d(MY_TAG, "Handle Same face")
+
         insertFaceAndPhotoDetail(
             PhotoFaceRefEntity(
                 photoDetail.id,
@@ -252,7 +272,8 @@ class FaceRecognition @Inject constructor(
         photoDetail: PhotosEntity,
         similarFaceList: List<SimilarFaceWithSimilarity> = emptyList()
     ) = coroutineScope {
-        Log.d(MY_TAG, "Handle New face")
+        Logger.d(MY_TAG, "Handle New face")
+
         val faceFileName = System.nanoTime().toString()
         saveCroppedFaceToExternalStorage(faceBitmap, faceFileName)?.also { file ->
             val faceDetail = FacesEntity(
@@ -363,7 +384,8 @@ class FaceRecognition @Inject constructor(
             // Return the first (and only) array from the 2D array
             return outputArray[0]
         } catch (e: Exception) {
-            Log.e("Similar", "Error generating embedding", e)
+            Logger.e("Similar", "Error generating embedding - $e")
+
             return null
         }
     }

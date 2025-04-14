@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.drawable.BitmapDrawable
 import android.net.Uri
+import android.os.Build
 import android.util.Log
 import android.util.Size
 import androidx.core.graphics.drawable.toBitmap
@@ -19,6 +20,7 @@ import com.example.facedetectionusingmlkit.data.local.entity.GalleryPhotoEntity
 import com.example.facedetectionusingmlkit.data.repositories.MyRepository
 import com.example.facedetectionusingmlkit.utils.Config
 import com.example.facedetectionusingmlkit.utils.HeicDecoderUtil
+import com.example.facedetectionusingmlkit.utils.Logger
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.face.Face
 import com.google.mlkit.vision.face.FaceDetection
@@ -63,7 +65,7 @@ class FaceDetectionWorker @AssistedInject constructor(
             while (!isStopped) {
                 iteration++
                 val galleryImages = getImage(Config.BATCH_SIZE)
-                Log.i(MY_TAG, "iteration: $iteration with ${galleryImages.size}")
+                Logger.i(MY_TAG, "iteration: $iteration with ${galleryImages.size}")
                 if (galleryImages.isEmpty()) {
                     break
                 }
@@ -73,7 +75,7 @@ class FaceDetectionWorker @AssistedInject constructor(
 
             return Result.success()
         } catch (e: Exception) {
-            Log.e(MY_TAG, "Error: ${e.message}, retrying...")
+            Logger.e(MY_TAG, "Error: ${e.message}, retrying...")
             Result.retry()
         }
     }
@@ -94,23 +96,23 @@ class FaceDetectionWorker @AssistedInject constructor(
     }
 
     private suspend fun startFaceDetection(galleryPhotos: List<GalleryPhotoEntity>): Boolean {
-        Log.d(MY_TAG, "Worker started with ${galleryPhotos.size} photos")
+        Logger.d(MY_TAG, "Worker started with ${galleryPhotos.size} photos")
 
         return try {
             val shouldUseHeicDecoder = prefManager.isHeicDecoder()
-            Log.d(MY_TAG, "galleryPhotos: ${galleryPhotos.size}")
+            Logger.d(MY_TAG, "galleryPhotos: ${galleryPhotos.size}")
             withContext(Dispatchers.Default) {
 //                galleryPhotos.chunked(Config.BATCH_SIZE).forEach { chunk ->
                 var processed = 0
                 val processedPhotos = mutableSetOf<Pair<Uri, Int>>()
                 measureTimeMillis {
                     galleryPhotos.mapIndexed { index, photo ->
-                        Log.d(MY_TAG, "photoName: ${photo.photoName} -- $index")
+                        Logger.d(MY_TAG, "photoName: ${photo.photoName} -- $index")
                         async {
                             semaphore.withPermit {
                                 measureTimeMillis {
                                     processed += 1
-                                    Log.d(
+                                    Logger.d(
                                         MY_TAG,
                                         "photoName: ${photo.photoName} inside semaphore"
                                     )
@@ -119,24 +121,34 @@ class FaceDetectionWorker @AssistedInject constructor(
                                         context.contentResolver.getType(photo.fileUri)
                                     measureTimeMillis {
                                         bitmap = if (shouldUseHeicDecoder) {
-                                            Log.i(MY_TAG, "Inside Heic decoder")
+                                            Logger.i(MY_TAG, "Inside Heic decoder")
                                             HeicDecoderUtil.decodeBitmap(
                                                 context = context,
                                                 photo.fileUri,
-                                                Size(prefManager.getImageWidth(), prefManager.getImageHeight())
+                                                Size(
+                                                    prefManager.getImageWidth(),
+                                                    prefManager.getImageHeight()
+                                                )
                                             )
                                         } else {
-                                            Log.i(MY_TAG, "Inside Coil bitmap creation")
+                                            Logger.i(MY_TAG, "Inside Coil bitmap creation")
                                             loadImageAsBitmap(photo.fileUri)
                                         } ?: run {
                                             processedPhotos.add(Pair(photo.fileUri, 0))
 //                                            updateProcessedPhoto(0, photo.fileUri)
                                             return@async
                                         }
+                                        val hardwareUsed =
+                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                                bitmap!!.config == Bitmap.Config.HARDWARE
+                                            } else {
+                                                false
+                                            }
+                                        Log.i("hardwareUsed", "hardwareUsed: $hardwareUsed")
 
                                     }.also {
                                         prefManager.addSingleImageProcessTime(it, mimeType)
-                                        Log.i(
+                                        Logger.i(
                                             MY_TAG,
                                             "Takes $it ms to create bitmap for ${photo.photoName} -- mimeType: $mimeType"
                                         )
@@ -148,7 +160,7 @@ class FaceDetectionWorker @AssistedInject constructor(
                                         measureTimeMillis {
                                             faces = runMlKit(bitmap!!, 0, faceDetector)
                                         }.also {
-                                            Log.d(
+                                            Logger.d(
                                                 MY_TAG,
                                                 "Takes $it ms for ${photo.photoName} -- face size: ${faces.size}"
                                             )
@@ -177,7 +189,7 @@ class FaceDetectionWorker @AssistedInject constructor(
                     updateProcessedPhotos(processedPhotos)
                 }.also {
                     prefManager.addProcessedTime(it)
-                    Log.i(
+                    Logger.i(
                         MY_TAG,
                         "$it ms for ${galleryPhotos.size} photos-- avg time = ${prefManager.getAverageProcessedTime()} ms"
                     )
@@ -186,7 +198,7 @@ class FaceDetectionWorker @AssistedInject constructor(
             }
             true
         } catch (e: Exception) {
-            Log.e(MY_TAG, "Exception in face detection: ${e.message}")
+            Logger.e(MY_TAG, "Exception in face detection: ${e.message}")
             false
         }
     }
@@ -271,7 +283,7 @@ class FaceDetectionWorker @AssistedInject constructor(
 
             jpegBitmap
         } catch (e: Exception) {
-            Log.e("ImageConversion", "Error converting image to JPEG Bitmap: ${e.message}")
+            Logger.e("ImageConversion", "Error converting image to JPEG Bitmap: ${e.message}")
             null
         }
     }
@@ -301,7 +313,7 @@ class FaceDetectionWorker @AssistedInject constructor(
 
                 bitmap
             } catch (e: Exception) {
-                Log.e("DetectedFace", "Exception while creating bitmap: ${e.message}")
+                Logger.e("DetectedFace", "Exception while creating bitmap: ${e.message}")
                 null
             }
         }
