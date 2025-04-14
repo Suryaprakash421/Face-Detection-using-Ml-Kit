@@ -41,6 +41,7 @@ import java.util.UUID
 import javax.inject.Inject
 import kotlin.math.sqrt
 import kotlin.system.measureTimeMillis
+import androidx.core.graphics.scale
 
 class FaceRecognition @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -63,30 +64,53 @@ class FaceRecognition @Inject constructor(
     }
 
     private val compatList = CompatibilityList()
-    private val options = Interpreter.Options().apply {
-        if (compatList.isDelegateSupportedOnThisDevice) {
-            this.addDelegate(GpuDelegate(compatList.bestOptionsForThisDevice))
-        } else {
-            this.setNumThreads(4)
+//    private val options = Interpreter.Options().apply {
+//        if (compatList.isDelegateSupportedOnThisDevice) {
+//            this.addDelegate(GpuDelegate(compatList.bestOptionsForThisDevice))
+//        } else {
+//            this.setNumThreads(4)
+//        }
+//    }
+//
+//    private fun loadModelFile(): MappedByteBuffer {
+//        val assetFileDescriptor = context.assets.openFd(MODEL_NAME)
+//        val fileInputStream = FileInputStream(assetFileDescriptor.fileDescriptor)
+//        val fileChannel = fileInputStream.channel
+//        return fileChannel.map(
+//            FileChannel.MapMode.READ_ONLY,
+//            assetFileDescriptor.startOffset,
+//            assetFileDescriptor.declaredLength
+//        )
+//    }
+//
+//    private fun getInterpreter(): Interpreter {
+//        return Interpreter(
+//            loadModelFile(),
+//            options
+//        )
+//    }
+
+    private val interpreter: Interpreter by lazy {
+        val options = Interpreter.Options().apply {
+            if (compatList.isDelegateSupportedOnThisDevice) {
+                addDelegate(GpuDelegate(compatList.bestOptionsForThisDevice))
+            } else {
+                setNumThreads(4)
+            }
         }
+        Interpreter(loadModelFile(), options)
     }
 
     private fun loadModelFile(): MappedByteBuffer {
-        val assetFileDescriptor = context.assets.openFd(MODEL_NAME)
-        val fileInputStream = FileInputStream(assetFileDescriptor.fileDescriptor)
-        val fileChannel = fileInputStream.channel
-        return fileChannel.map(
-            FileChannel.MapMode.READ_ONLY,
-            assetFileDescriptor.startOffset,
-            assetFileDescriptor.declaredLength
-        )
-    }
-
-    private fun getInterpreter(): Interpreter {
-        return Interpreter(
-            loadModelFile(),
-            options
-        )
+        context.assets.openFd(MODEL_NAME).use { afd ->
+            FileInputStream(afd.fileDescriptor).channel.use { channel ->
+                return channel.map(
+                    FileChannel.MapMode.READ_ONLY,
+                    afd.startOffset,
+                    afd.declaredLength
+                )
+            }
+        }
     }
 
     /**
@@ -370,17 +394,16 @@ class FaceRecognition @Inject constructor(
         return sqrt(sumSquaredDifferences)
     }
 
-    private val outputArray =
-        Array(1) { FloatArray(512) }
-
     private fun generateEmbedding(face: Bitmap): FloatArray? {
         try {
+            val outputArray =
+                Array(1) { FloatArray(512) }
             val inputArray = preprocessImage(face)
             inputArray.rewind()
 
-            val interpreter = getInterpreter()
+//            val interpreter = getInterpreter()
             interpreter.run(inputArray, outputArray)
-            interpreter.close()
+//            interpreter.close()
             // Return the first (and only) array from the 2D array
             return outputArray[0]
         } catch (e: Exception) {
@@ -395,7 +418,7 @@ class FaceRecognition @Inject constructor(
         // Convert the Bitmap to a Mutable ARGB_8888 version
         val safeBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true)
 
-        val resizedBitmap = Bitmap.createScaledBitmap(safeBitmap, inputSize, inputSize, true)
+        val resizedBitmap = safeBitmap.scale(inputSize, inputSize)
 
         val byteBuffer = ByteBuffer.allocateDirect(inputSize * inputSize * 3 * 4)
         byteBuffer.order(ByteOrder.nativeOrder())
