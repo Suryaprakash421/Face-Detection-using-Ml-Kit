@@ -1,12 +1,11 @@
 package com.example.facedetectionusingmlkit.workmanager
 
 import android.content.Context
-import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Matrix
 import android.graphics.Rect
 import android.net.Uri
-import android.util.Log
+import androidx.core.graphics.scale
 import com.example.facedetectionusingmlkit.data.local.PrefManager
 import com.example.facedetectionusingmlkit.data.local.entity.FacesEntity
 import com.example.facedetectionusingmlkit.data.local.entity.GalleryPhotoEntity
@@ -27,7 +26,6 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import org.tensorflow.lite.Interpreter
 import org.tensorflow.lite.gpu.CompatibilityList
-import org.tensorflow.lite.gpu.GpuDelegate
 import org.tensorflow.lite.nnapi.NnApiDelegate
 import java.io.File
 import java.io.FileInputStream
@@ -41,7 +39,6 @@ import java.util.UUID
 import javax.inject.Inject
 import kotlin.math.sqrt
 import kotlin.system.measureTimeMillis
-import androidx.core.graphics.scale
 
 class FaceRecognition @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -58,6 +55,8 @@ class FaceRecognition @Inject constructor(
         const val MAX_PONT_FOR_DISTANCE = 1.2
         const val MIN_PONT_FOR_DISTANCE = 1.0
     }
+
+    var model: ModelInfo = Models.FACENET_512_QUANTIZED
 
     init {
         observeFacesEntity()
@@ -98,13 +97,14 @@ class FaceRecognition @Inject constructor(
 //                setNumThreads(4)
 //            }
             addDelegate(NnApiDelegate())
+            setUseXNNPACK(true)
             setNumThreads(4)
         }
         Interpreter(loadModelFile(), options)
     }
 
     private fun loadModelFile(): MappedByteBuffer {
-        context.assets.openFd(MODEL_NAME).use { afd ->
+        context.assets.openFd(model.assetsFilename).use { afd ->
             FileInputStream(afd.fileDescriptor).channel.use { channel ->
                 return channel.map(
                     FileChannel.MapMode.READ_ONLY,
@@ -397,27 +397,23 @@ class FaceRecognition @Inject constructor(
     }
 
     private fun generateEmbedding(face: Bitmap): FloatArray? {
-        try {
-            val outputArray =
-                Array(1) { FloatArray(512) }
-            val inputArray = preprocessImage(face)
-            inputArray.rewind()
+        return try {
+            val outputArray = Array(1) { FloatArray(model.outputDims) }
+            val inputBuffer = preprocessImage(face) // ByteBuffer of shape [1, 160, 160, 3]
+            inputBuffer.rewind()
 
-//            val interpreter = getInterpreter()
-            interpreter.run(inputArray, outputArray)
-            interpreter.getInputTensor(0).dataType()
-//            interpreter.close()
-            // Return the first (and only) array from the 2D array
-            return outputArray[0]
+            interpreter.run(inputBuffer, outputArray) // ✅ Direct ByteBuffer input for FLOAT32 model
+
+            outputArray[0]
         } catch (e: Exception) {
             Logger.e("Similar", "Error generating embedding - $e")
-
-            return null
+            null
         }
     }
 
+
     private fun preprocessImage(bitmap: Bitmap): ByteBuffer {
-        val inputSize = 160
+        val inputSize = model.inputDims
         // Convert the Bitmap to a Mutable ARGB_8888 version
         val safeBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true)
 

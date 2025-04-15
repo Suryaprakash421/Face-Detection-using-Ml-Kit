@@ -138,13 +138,6 @@ class FaceDetectionWorker @AssistedInject constructor(
 //                                            updateProcessedPhoto(0, photo.fileUri)
                                             return@async
                                         }
-                                        val hardwareUsed =
-                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                                                bitmap!!.config == Bitmap.Config.HARDWARE
-                                            } else {
-                                                false
-                                            }
-                                        Logger.i("hardwareUsed", "hardwareUsed: $hardwareUsed")
 
                                     }.also {
                                         prefManager.addSingleImageProcessTime(it, mimeType)

@@ -6,12 +6,9 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.ImageDecoder
 import android.media.MediaCodecList
-import android.media.MediaCodecInfo
 import android.net.Uri
 import android.os.Build
-import android.util.Log
 import android.util.Size
-import java.io.InputStream
 
 object HeicDecoderUtil {
     const val MY_TAG = "HeicDecoderUtil"
@@ -22,11 +19,11 @@ object HeicDecoderUtil {
      */
     fun decodeBitmap(context: Context, uri: Uri, targetSize: Size? = null): Bitmap? {
         val mimeType = context.contentResolver.getType(uri) ?: return null
-        Log.i(MY_TAG, "mimeType: $mimeType")
+        Logger.i(MY_TAG, "mimeType: $mimeType")
         return try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && mimeType?.contains("heic") == true) {
                 if (isHeicHardwareDecodeSupported()) {
-                    Log.d(MY_TAG, "Hardware decode")
+                    Logger.d(MY_TAG, "Hardware decode")
                     val source = ImageDecoder.createSource(context.contentResolver, uri)
                     ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
                         decoder.allocator = ImageDecoder.ALLOCATOR_HARDWARE
@@ -36,15 +33,15 @@ object HeicDecoderUtil {
                         }
                     }
                 } else {
-                    Log.e(MY_TAG, "HEIC hardware decode not supported")
+                    Logger.e(MY_TAG, "HEIC hardware decode not supported")
                     throw UnsupportedOperationException("HEIC hardware decode not supported")
                 }
             } else {
-                Log.i(MY_TAG, "Non Heic format image with below version Android 9")
+                Logger.i(MY_TAG, "Non Heic format image with below version Android 9")
                 decodeWithBitmapFactory(context.contentResolver, uri, targetSize)
             }
         } catch (e: Exception) {
-            Log.e("HeicDecoderUtil", "Fallback decode: ${e.message}, mimeType: $mimeType")
+            Logger.e("HeicDecoderUtil", "Fallback decode: ${e.message}, mimeType: $mimeType")
             decodeWithBitmapFactory(context.contentResolver, uri, targetSize)
         }
     }
