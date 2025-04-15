@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import org.tensorflow.lite.Interpreter
 import org.tensorflow.lite.gpu.CompatibilityList
+import org.tensorflow.lite.gpu.GpuDelegate
 import org.tensorflow.lite.nnapi.NnApiDelegate
 import java.io.File
 import java.io.FileInputStream
@@ -56,7 +57,7 @@ class FaceRecognition @Inject constructor(
         const val MIN_PONT_FOR_DISTANCE = 1.0
     }
 
-    var model: ModelInfo = Models.FACENET_512_QUANTIZED
+    var model: ModelInfo = Models.FACENET_512_F16
 
     init {
         observeFacesEntity()
@@ -91,14 +92,14 @@ class FaceRecognition @Inject constructor(
 
     private val interpreter: Interpreter by lazy {
         val options = Interpreter.Options().apply {
-//            if (compatList.isDelegateSupportedOnThisDevice) {
-//                addDelegate(GpuDelegate(compatList.bestOptionsForThisDevice))
-//            } else {
-//                setNumThreads(4)
-//            }
-            addDelegate(NnApiDelegate())
+            if (compatList.isDelegateSupportedOnThisDevice) {
+                addDelegate(GpuDelegate(compatList.bestOptionsForThisDevice))
+            } else {
+                setNumThreads(4)
+            }
+//            addDelegate(NnApiDelegate())
             setUseXNNPACK(true)
-            setNumThreads(4)
+//            setNumThreads(4)
         }
         Interpreter(loadModelFile(), options)
     }

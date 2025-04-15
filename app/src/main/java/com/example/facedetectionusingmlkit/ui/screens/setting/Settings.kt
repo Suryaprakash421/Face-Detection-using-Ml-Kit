@@ -16,6 +16,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -256,7 +257,7 @@ fun ThresholdRow(
                 buildAnnotatedString {
                     append(title)
                     append(": ")
-                    withStyle(style = SpanStyle(color = Color.Blue, fontWeight = FontWeight.Bold)) {
+                    withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)) {
                         append(threshold.formatToDecimalPlaces(2))
                     }
                 },
@@ -346,7 +347,7 @@ fun TitleAndValue(title: String, value: String, modifier: Modifier = Modifier) {
             append(": ")
             withStyle(
                 style = SpanStyle(
-                    color = Color.Blue,
+                    color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold
                 )
             ) {
