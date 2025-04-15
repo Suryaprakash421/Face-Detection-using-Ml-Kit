@@ -92,11 +92,13 @@ class FaceRecognition @Inject constructor(
 
     private val interpreter: Interpreter by lazy {
         val options = Interpreter.Options().apply {
-            if (compatList.isDelegateSupportedOnThisDevice) {
-                addDelegate(GpuDelegate(compatList.bestOptionsForThisDevice))
-            } else {
-                setNumThreads(4)
-            }
+//            if (compatList.isDelegateSupportedOnThisDevice) {
+//                addDelegate(GpuDelegate(compatList.bestOptionsForThisDevice))
+//            } else {
+//                setNumThreads(4)
+//            }
+            addDelegate(NnApiDelegate())
+            setNumThreads(4)
         }
         Interpreter(loadModelFile(), options)
     }
@@ -403,6 +405,7 @@ class FaceRecognition @Inject constructor(
 
 //            val interpreter = getInterpreter()
             interpreter.run(inputArray, outputArray)
+            interpreter.getInputTensor(0).dataType()
 //            interpreter.close()
             // Return the first (and only) array from the 2D array
             return outputArray[0]

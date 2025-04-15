@@ -144,7 +144,7 @@ class FaceDetectionWorker @AssistedInject constructor(
                                             } else {
                                                 false
                                             }
-                                        Log.i("hardwareUsed", "hardwareUsed: $hardwareUsed")
+                                        Logger.i("hardwareUsed", "hardwareUsed: $hardwareUsed")
 
                                     }.also {
                                         prefManager.addSingleImageProcessTime(it, mimeType)
