@@ -99,6 +99,7 @@ dependencies {
 
     // ML kit
     implementation(libs.face.detection)
+    implementation (libs.text.recognition)
 
     // TF lite
     implementation(libs.tensorflow.lite)

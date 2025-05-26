@@ -8,6 +8,7 @@ import com.example.facedetectionusingmlkit.data.local.PrefManager
 import com.example.facedetectionusingmlkit.ui.screens.setting.Settings
 import com.example.facedetectionusingmlkit.ui.screens.ai.AiScreen
 import com.example.facedetectionusingmlkit.ui.screens.home.HomeScreen
+import com.example.facedetectionusingmlkit.ui.screens.textReconizer.DetectText
 
 @Composable
 fun MyNavigation(navController: NavHostController, prefManager: PrefManager) {
@@ -20,6 +21,9 @@ fun MyNavigation(navController: NavHostController, prefManager: PrefManager) {
         }
         composable(Settings.route) {
             Settings(prefManager)
+        }
+        composable(DetectText.route) {
+            DetectText()
         }
     }
 }

@@ -12,6 +12,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
 import com.example.facedetectionusingmlkit.route.Ai
+import com.example.facedetectionusingmlkit.route.DetectText
 import com.example.facedetectionusingmlkit.route.Home
 import com.example.facedetectionusingmlkit.route.Settings
 
@@ -20,6 +21,7 @@ fun BottomBarNavigation(navController: NavController, modifier: Modifier = Modif
     val destinationList = listOf(
         Home,
         Ai,
+        DetectText,
         Settings
     )
 

@@ -1,6 +1,7 @@
 package com.example.facedetectionusingmlkit.route
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
@@ -28,6 +29,15 @@ object Ai : Destination {
         get() = Icons.Default.Face
     override val title: String
         get() = "AI"
+}
+
+object DetectText : Destination {
+    override val route: String
+        get() = "DetectText"
+    override val icon: ImageVector
+        get() = Icons.Default.Create
+    override val title: String
+        get() = "Text Recognizer"
 }
 
 object Settings : Destination {
