@@ -5,6 +5,7 @@ import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.ui.graphics.vector.ImageVector
 
 interface Destination {
@@ -38,6 +39,15 @@ object DetectText : Destination {
         get() = Icons.Default.Create
     override val title: String
         get() = "Text Recognizer"
+}
+
+object WhatsApp : Destination {
+    override val route: String
+        get() = "WhatsApp"
+    override val icon: ImageVector
+        get() = Icons.Default.Share
+    override val title: String
+        get() = "WhatsApp"
 }
 
 object Settings : Destination {

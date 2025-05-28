@@ -28,8 +28,9 @@ import com.example.facedetectionusingmlkit.viewmodel.MyViewModel
 
 @Composable
 fun HomeScreen(modifier: Modifier = Modifier, myViewModel: MyViewModel = hiltViewModel()) {
+    val galleryImageList by myViewModel.galleryImages.collectAsState(initial = emptyList())
     CheckPermission()
-    GridPhotoView()
+    GridPhotoView(galleryImageList = galleryImageList)
 }
 
 @Composable
@@ -45,6 +46,7 @@ fun CheckPermission(myViewModel: MyViewModel = hiltViewModel()) {
     RequestMediaPermissions { isGranted ->
         if (isGranted) {
             myViewModel.getLocalImages()
+//            myViewModel.getWhatsAppPhotos()
         }
     }
 }

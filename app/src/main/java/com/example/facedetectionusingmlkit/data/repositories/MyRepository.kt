@@ -48,6 +48,17 @@ class MyRepository(
             emptyList()
         }
     }
+    /**
+     * Get WhatsApp images from MediaStore
+     * */
+    suspend fun getWhatsAppPhotos(): List<GalleryPhotoEntity> = withContext(Dispatchers.IO) {
+        try {
+            MediaHelper.getWhatsAppPhotos(context)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
 
     /**
      * Get gallery images from MediaStore

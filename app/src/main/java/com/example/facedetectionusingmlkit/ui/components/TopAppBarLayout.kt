@@ -30,6 +30,7 @@ import com.example.facedetectionusingmlkit.data.local.PrefManager
 import com.example.facedetectionusingmlkit.route.Ai
 import com.example.facedetectionusingmlkit.route.Home
 import com.example.facedetectionusingmlkit.route.Settings
+import com.example.facedetectionusingmlkit.route.WhatsApp
 import com.example.facedetectionusingmlkit.utils.Logger
 import com.example.facedetectionusingmlkit.viewmodel.MyViewModel
 
@@ -52,6 +53,7 @@ fun TopAppBar(
     val currentScreen = when (currentDestination) {
         Home.route -> Home
         Ai.route -> Ai
+        WhatsApp.route -> WhatsApp
         Settings.route -> Settings
         else -> Home
     }

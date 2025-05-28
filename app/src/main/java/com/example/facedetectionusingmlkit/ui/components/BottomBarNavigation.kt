@@ -15,13 +15,15 @@ import com.example.facedetectionusingmlkit.route.Ai
 import com.example.facedetectionusingmlkit.route.DetectText
 import com.example.facedetectionusingmlkit.route.Home
 import com.example.facedetectionusingmlkit.route.Settings
+import com.example.facedetectionusingmlkit.route.WhatsApp
 
 @Composable
 fun BottomBarNavigation(navController: NavController, modifier: Modifier = Modifier) {
     val destinationList = listOf(
         Home,
         Ai,
-        DetectText,
+//        DetectText,
+        WhatsApp,
         Settings
     )
 

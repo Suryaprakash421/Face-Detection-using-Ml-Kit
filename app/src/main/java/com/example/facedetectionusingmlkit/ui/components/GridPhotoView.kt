@@ -29,15 +29,12 @@ import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
-import com.example.facedetectionusingmlkit.viewmodel.MyViewModel
 import com.example.facedetectionusingmlkit.data.local.entity.GalleryPhotoEntity
 
 @Composable
-fun GridPhotoView(modifier: Modifier = Modifier, myViewModel: MyViewModel = hiltViewModel()) {
-    val galleryImageList by myViewModel.galleryImages.collectAsState(initial = emptyList())
+fun GridPhotoView(modifier: Modifier = Modifier, galleryImageList: List<GalleryPhotoEntity>,) {
 
     Log.i("galleryImageList", "galleryImageList: ${galleryImageList.size}")
     val gridState = rememberSaveable(saver = LazyGridState.Saver) {

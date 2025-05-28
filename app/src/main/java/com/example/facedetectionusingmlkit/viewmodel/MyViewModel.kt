@@ -109,11 +109,24 @@ class MyViewModel @Inject constructor(
     val localImages: StateFlow<List<GalleryPhotoEntity>> get() = _localImages.asStateFlow()
 
     fun getLocalImages() {
-        Log.d("isGranted", "getLocalImages -- entered")
         viewModelScope.launch {
             val images = myRepository.getLocalImages()
-            Log.d("isGranted", "images -- ${images.size}")
             _localImages.value = images
+        }
+    }
+
+    /**
+     * Get gallery images from MediaStore
+     * */
+    private var _whatsAppImages = MutableStateFlow<List<GalleryPhotoEntity>>(emptyList())
+    val whatsAppImages: StateFlow<List<GalleryPhotoEntity>> get() = _whatsAppImages.asStateFlow()
+
+    fun getWhatsAppPhotos() {
+        Log.d("isGranted", "getWhatsAppPhotos -- entered")
+        viewModelScope.launch {
+            val images = myRepository.getWhatsAppPhotos()
+            Log.d("isGranted", "images -- ${images.size}")
+            _whatsAppImages.value = images
         }
     }
 
