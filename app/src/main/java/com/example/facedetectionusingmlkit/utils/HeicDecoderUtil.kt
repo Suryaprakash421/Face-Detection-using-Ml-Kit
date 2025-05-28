@@ -26,7 +26,7 @@ object HeicDecoderUtil {
                     Logger.d(MY_TAG, "Hardware decode")
                     val source = ImageDecoder.createSource(context.contentResolver, uri)
                     ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
-                        decoder.allocator = ImageDecoder.ALLOCATOR_HARDWARE
+                        decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
                         targetSize?.let {
                             decoder.setTargetSize(it.width, it.height)
 //                            decoder.setTargetSize(it, it * info.size.height / info.size.width)

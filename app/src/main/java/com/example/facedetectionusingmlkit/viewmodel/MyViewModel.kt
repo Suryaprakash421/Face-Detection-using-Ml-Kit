@@ -19,16 +19,19 @@ import com.example.facedetectionusingmlkit.workmanager.FaceDetectionWorker
 import com.example.facedetectionusingmlkit.workmanager.startWorker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
-import java.io.File
-import java.util.UUID
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @HiltViewModel
@@ -149,18 +152,35 @@ class MyViewModel @Inject constructor(
 
     private var inProgress = false
     private var oldImageSize = 0
+    private var processedImages: MutableSet<GalleryPhotoEntity> = mutableSetOf()
+    private val semaphore = Semaphore(4)
     fun filterJunks() {
         if (inProgress || oldImageSize == whatsAppImages.value.size) return
-        oldImageSize = whatsAppImages.value.size
         inProgress = true
         Log.d("isProcess", "Started")
         viewModelScope.launch {
-            for (photo in whatsAppImages.value) {
-                val isValid = junkFilter.isRelevantFamilyOrFriendPhoto(File(photo.filePath))
-                if (isValid) {
-                    addFilteredImage(photo)
+            val list = whatsAppImages.value - processedImages
+            val jobs = list.map { photo ->
+                async { // run each task concurrently
+                    semaphore.withPermit {
+                        val isValid = junkFilter.isRelevantFamilyOrFriendPhoto(photo)
+                        if (isValid) {
+                            addFilteredImage(photo)
+                        }
+                        processedImages.add(photo)
+                    }
                 }
             }
+
+            jobs.awaitAll()
+//            for (photo in list) {
+//                val isValid = junkFilter.isRelevantFamilyOrFriendPhoto(photo)
+//                if (isValid) {
+//                    addFilteredImage(photo)
+//                }
+//                processedImages.add(photo)
+//            }
+            oldImageSize = whatsAppImages.value.size
             inProgress = false
             Log.d("isProcess", "process ended")
         }

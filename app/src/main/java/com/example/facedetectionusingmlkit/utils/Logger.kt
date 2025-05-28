@@ -1,5 +1,6 @@
 package com.example.facedetectionusingmlkit.utils
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -14,11 +15,12 @@ import java.util.*
 import java.util.concurrent.locks.ReentrantLock
 
 object Logger {
-
-    private const val LOG_FILE_PATH = "logs"
+    private const val LOG_FILE_PATH = "log"
+    private const val LOG_FILE_NAME = "log.txt"
     private val context by lazy { Config.context }
     private val logFile by lazy { getLogFileDirectory(context) }
     private val lock = ReentrantLock()
+    @SuppressLint("ConstantLocale")
     private val logDateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss a", Locale.getDefault())
 
     fun i(tag: String, message: String) = log("I", tag, message, Log::i)
@@ -62,11 +64,11 @@ object Logger {
         if (!directory.exists()) {
             directory.mkdirs()
         }
-        return File(directory, "log.txt")
+        return File(directory, LOG_FILE_NAME)
     }
 
     fun shareLogFile(context: Context) {
-        val authority = "${context.packageName}.fileprovider"
+        val authority = "com.qliqle.app.fileProvider"
         val contentUri: Uri = FileProvider.getUriForFile(context, authority, logFile)
 
         val shareIntent = Intent(Intent.ACTION_SEND).apply {

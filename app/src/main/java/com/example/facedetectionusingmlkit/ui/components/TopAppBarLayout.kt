@@ -77,13 +77,11 @@ fun TopAppBar(
                     contentDescription = "Share logs",
                 )
             }
-            if (currentScreen.route == Settings.route) {
-                IconButton(onClick = { handleDelete(myViewModel) }) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "Clear database",
-                    )
-                }
+            IconButton(onClick = { handleDelete(myViewModel) }) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Clear database",
+                )
             }
         }
     )
