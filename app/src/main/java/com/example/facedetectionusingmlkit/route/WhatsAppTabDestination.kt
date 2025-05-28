@@ -14,9 +14,9 @@ object WhatsAppImages : WhatsAppTabDestination {
 
 object FilteredWhatsAppImages : WhatsAppTabDestination {
     override val route: String
-    get() = "filteredWhatsAppImages"
+        get() = "filteredWhatsAppImages"
     override val title: String
-    get() = "Filtered"
+        get() = "Filtered"
 }
 
 val whatsAppTabDestinations = listOf(WhatsAppImages, FilteredWhatsAppImages)

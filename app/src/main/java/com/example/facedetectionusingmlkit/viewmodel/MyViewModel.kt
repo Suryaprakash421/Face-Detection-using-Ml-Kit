@@ -14,6 +14,7 @@ import com.example.facedetectionusingmlkit.domain.usecase.GetDetectedFaceUseCase
 import com.example.facedetectionusingmlkit.utils.BitmapCreationMethod
 import com.example.facedetectionusingmlkit.utils.FaceDetectionMethods
 import com.example.facedetectionusingmlkit.utils.Logger
+import com.example.facedetectionusingmlkit.utils.junkFilter.JunkFilter
 import com.example.facedetectionusingmlkit.workmanager.FaceDetectionWorker
 import com.example.facedetectionusingmlkit.workmanager.startWorker
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -24,7 +25,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.File
 import java.util.UUID
 import javax.inject.Inject
 
@@ -34,7 +37,8 @@ class MyViewModel @Inject constructor(
     private val myRepository: MyRepository,
     private val workManager: WorkManager,
     private val prefManager: PrefManager,
-    private val getDetectedFaceUseCase: GetDetectedFaceUseCase
+    private val getDetectedFaceUseCase: GetDetectedFaceUseCase,
+    private val junkFilter: JunkFilter
 ) : AndroidViewModel(application) {
 
     val faceDetectionMode =
@@ -123,10 +127,42 @@ class MyViewModel @Inject constructor(
 
     fun getWhatsAppPhotos() {
         Log.d("isGranted", "getWhatsAppPhotos -- entered")
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             val images = myRepository.getWhatsAppPhotos()
             Log.d("isGranted", "images -- ${images.size}")
             _whatsAppImages.value = images
+            filterJunks()
+        }
+    }
+
+    /**
+     * Get gallery images from MediaStore
+     * */
+    private var _junkFiltered = MutableStateFlow(setOf<GalleryPhotoEntity>())
+    val junkFiltered: StateFlow<Set<GalleryPhotoEntity>> get() = _junkFiltered.asStateFlow()
+
+    private fun addFilteredImage(new: GalleryPhotoEntity) {
+        _junkFiltered.update { old ->
+            old + new
+        }
+    }
+
+    private var inProgress = false
+    private var oldImageSize = 0
+    fun filterJunks() {
+        if (inProgress || oldImageSize == whatsAppImages.value.size) return
+        oldImageSize = whatsAppImages.value.size
+        inProgress = true
+        Log.d("isProcess", "Started")
+        viewModelScope.launch {
+            for (photo in whatsAppImages.value) {
+                val isValid = junkFilter.isRelevantFamilyOrFriendPhoto(File(photo.filePath))
+                if (isValid) {
+                    addFilteredImage(photo)
+                }
+            }
+            inProgress = false
+            Log.d("isProcess", "process ended")
         }
     }
 

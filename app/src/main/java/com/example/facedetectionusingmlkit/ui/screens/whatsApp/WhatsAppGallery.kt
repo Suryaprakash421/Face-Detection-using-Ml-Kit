@@ -15,6 +15,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.facedetectionusingmlkit.data.local.entity.GalleryPhotoEntity
 import com.example.facedetectionusingmlkit.route.FilteredWhatsAppImages
 import com.example.facedetectionusingmlkit.route.WhatsAppImages
 import com.example.facedetectionusingmlkit.route.whatsAppTabDestinations
@@ -23,51 +24,46 @@ import com.example.facedetectionusingmlkit.viewmodel.MyViewModel
 
 @Composable
 fun WhatsAppTabScreen(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    myViewModel: MyViewModel = hiltViewModel()
 ) {
     var selectedTabIndex by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(Unit) {
+        myViewModel.getWhatsAppPhotos()
+    }
+    val whatsAppImages by myViewModel.whatsAppImages.collectAsState(initial = emptyList())
+    val filteredImages by myViewModel.junkFiltered.collectAsState(initial = emptyList())
 
 
     Column(modifier = modifier.fillMaxSize()) {
         // Tab Row
         TabRow(selectedTabIndex = selectedTabIndex) {
             whatsAppTabDestinations.forEachIndexed { index, tab ->
+                val count = when (whatsAppTabDestinations[index]) {
+                    is WhatsAppImages -> whatsAppImages.size
+                    is FilteredWhatsAppImages -> filteredImages.size
+                    else -> 0
+                }
                 Tab(
                     selected = selectedTabIndex == index,
                     onClick = { selectedTabIndex = index },
-                    text = { Text(tab.title) }
+                    text = { Text("${tab.title} ($count)") }
                 )
             }
         }
 
         // Content under tabs
         when (whatsAppTabDestinations[selectedTabIndex]) {
-            is WhatsAppImages -> WhatsAppGallery()
-            is FilteredWhatsAppImages -> FilteredWhatsAppGallery()
+            is WhatsAppImages -> WhatsAppGallery(whatsAppImages)
+            is FilteredWhatsAppImages -> WhatsAppGallery(filteredImages.toList())
         }
     }
 }
 
 
 @Composable
-fun WhatsAppGallery(modifier: Modifier = Modifier, myViewModel: MyViewModel = hiltViewModel()) {
-    LaunchedEffect(Unit) {
-        myViewModel.getWhatsAppPhotos()
-    }
-    val whatsAppImages by myViewModel.whatsAppImages.collectAsState(initial = emptyList())
-    Log.i("whatsAppImages", "whatsAppImages: ${whatsAppImages.size} - $whatsAppImages")
-    GridPhotoView(galleryImageList = whatsAppImages)
-}
-
-@Composable
-fun FilteredWhatsAppGallery(
-    modifier: Modifier = Modifier,
-    myViewModel: MyViewModel = hiltViewModel()
-) {
-    LaunchedEffect(Unit) {
-        myViewModel.getWhatsAppPhotos()
-    }
-    val whatsAppImages by myViewModel.whatsAppImages.collectAsState(initial = emptyList())
-    Log.i("whatsAppImages", "whatsAppImages: ${whatsAppImages.size} - $whatsAppImages")
-    GridPhotoView(galleryImageList = whatsAppImages)
+fun WhatsAppGallery(data: List<GalleryPhotoEntity>, modifier: Modifier = Modifier) {
+    Log.i("whatsAppImages", "whatsAppImages: ${data.size} - $data")
+    GridPhotoView(galleryImageList = data)
 }
