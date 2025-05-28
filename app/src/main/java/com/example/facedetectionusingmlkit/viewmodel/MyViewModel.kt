@@ -27,11 +27,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @HiltViewModel
@@ -43,6 +41,10 @@ class MyViewModel @Inject constructor(
     private val getDetectedFaceUseCase: GetDetectedFaceUseCase,
     private val junkFilter: JunkFilter
 ) : AndroidViewModel(application) {
+
+    companion object {
+        private const val MY_TAG = "MyViewModel"
+    }
 
     val faceDetectionMode =
         listOf(FaceDetectionMethods.FAST.name, FaceDetectionMethods.ACCURATE.name)
@@ -157,32 +159,39 @@ class MyViewModel @Inject constructor(
     fun filterJunks() {
         if (inProgress || oldImageSize == whatsAppImages.value.size) return
         inProgress = true
-        Log.d("isProcess", "Started")
+        Logger.d(MY_TAG, "Filter started")
         viewModelScope.launch {
             val list = whatsAppImages.value - processedImages
-            val jobs = list.map { photo ->
-                async { // run each task concurrently
-                    semaphore.withPermit {
+
+//            val jobs = list.map { photo ->
+//                async { // run each task concurrently
+//                    semaphore.withPermit {
+//                        Logger.d(MY_TAG, "photoName: ${photo.photoName} -- Check valid photo")
+//                        val isValid = junkFilter.isRelevantFamilyOrFriendPhoto(photo)
+//                        if (isValid) {
+//                            addFilteredImage(photo)
+//                        }
+//                        processedImages.add(photo)
+//                    }
+//                }
+//            }.awaitAll()
+
+            list.chunked(4).map { chunk ->
+                chunk.map { photo ->
+                    async { // run each task concurrently
+                        Logger.d(MY_TAG, "photoName: ${photo.photoName} -- Check valid photo")
                         val isValid = junkFilter.isRelevantFamilyOrFriendPhoto(photo)
                         if (isValid) {
                             addFilteredImage(photo)
                         }
                         processedImages.add(photo)
                     }
-                }
+                }.awaitAll()
             }
 
-            jobs.awaitAll()
-//            for (photo in list) {
-//                val isValid = junkFilter.isRelevantFamilyOrFriendPhoto(photo)
-//                if (isValid) {
-//                    addFilteredImage(photo)
-//                }
-//                processedImages.add(photo)
-//            }
             oldImageSize = whatsAppImages.value.size
             inProgress = false
-            Log.d("isProcess", "process ended")
+            Logger.d(MY_TAG, "Filter ended")
         }
     }
 
