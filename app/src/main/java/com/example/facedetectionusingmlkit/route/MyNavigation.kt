@@ -11,6 +11,7 @@ import com.example.facedetectionusingmlkit.ui.screens.ai.AiScreen
 import com.example.facedetectionusingmlkit.ui.screens.home.HomeScreen
 import com.example.facedetectionusingmlkit.ui.screens.textReconizer.DetectText
 import com.example.facedetectionusingmlkit.ui.screens.whatsApp.WhatsAppGallery
+import com.example.facedetectionusingmlkit.ui.screens.whatsApp.WhatsAppTabScreen
 
 @Composable
 fun MyNavigation(navController: NavHostController, prefManager: PrefManager) {
@@ -28,7 +29,7 @@ fun MyNavigation(navController: NavHostController, prefManager: PrefManager) {
             DetectText()
         }
         composable(WhatsApp.route) {
-            WhatsAppGallery()
+            WhatsAppTabScreen()
         }
     }
 }
