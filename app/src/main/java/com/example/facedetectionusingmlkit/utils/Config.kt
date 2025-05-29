@@ -70,4 +70,26 @@ object Config {
     const val DEVANAGARI = 2
     const val JAPANESE = 3
     const val KOREAN = 4
+
+    val cartoonKeywords =
+        listOf("cartoon", "animation", "illustration", "art", "toy")
+    val fictionKeyword =
+        listOf("fiction")
+    val imageWithTextKeyword =
+        listOf("poster", "paper", "pattern", "asphalt")
+    val isScreenshotKeyword =
+        listOf("screenshot")
+    val humanKeywords =
+        listOf(
+            "person",
+            "people",
+            "man",
+            "woman",
+            "face",
+            "selfie",
+            "portrait",
+            "child",
+            "dude",
+            "fun"
+        )
 }

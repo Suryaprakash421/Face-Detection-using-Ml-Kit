@@ -4,11 +4,13 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.net.Uri
 import android.util.Size
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.scale
 import com.example.facedetectionusingmlkit.data.local.PrefManager
 import com.example.facedetectionusingmlkit.data.local.entity.GalleryPhotoEntity
+import com.example.facedetectionusingmlkit.domain.model.OcrResult
 import com.example.facedetectionusingmlkit.utils.Config
 import com.example.facedetectionusingmlkit.utils.HeicDecoderUtil
 import com.example.facedetectionusingmlkit.utils.Logger
@@ -16,6 +18,8 @@ import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.face.Face
 import com.google.mlkit.vision.face.FaceDetection
 import com.google.mlkit.vision.face.FaceDetectorOptions
+import com.google.mlkit.vision.label.ImageLabeling
+import com.google.mlkit.vision.label.defaults.ImageLabelerOptions
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.TextRecognizerOptionsInterface
 import com.google.mlkit.vision.text.chinese.ChineseTextRecognizerOptions
@@ -24,6 +28,7 @@ import com.google.mlkit.vision.text.japanese.JapaneseTextRecognizerOptions
 import com.google.mlkit.vision.text.korean.KoreanTextRecognizerOptions
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.File
 import java.nio.ByteBuffer
 import java.security.MessageDigest
 import javax.inject.Inject
@@ -38,6 +43,7 @@ class JunkFilter @Inject constructor(
 ) {
     companion object {
         private const val MY_TAG = "JunkFilter"
+        private const val MIN_SIZE = 50 * 1024
     }
 
     private val option = FaceDetectorOptions.Builder()
@@ -59,19 +65,45 @@ class JunkFilter @Inject constructor(
         }
     }
 
+    //    val ocrTextRecognizer =
+//        TextRecognition.getClient(recognitionOption())
     val ocrTextRecognizer =
-        TextRecognition.getClient(recognitionOption())
-//    val ocrTextRecognizer = TextRecognition.getClient(DevanagariTextRecognizerOptions.Builder().build())
+        TextRecognition.getClient(DevanagariTextRecognizerOptions.Builder().build())
 
     private val recentHashes = mutableSetOf<String>()
+    private val recentUris = mutableSetOf<Uri>()
 
     suspend fun isRelevantFamilyOrFriendPhoto(photo: GalleryPhotoEntity): Boolean {
         var bitmap: Bitmap? = null
         try {
+            val file = File(photo.filePath)
+
+            val validSize = file.length() < MIN_SIZE
+            Logger.i(MY_TAG, "Start filtering -- photoName: ${photo.photoName}, validSize: $validSize")
+
+            // File is less than 50KB, so return early
+            if (validSize) {
+                return false
+            }
+
             val fileUri = photo.fileUri
             val inputImage = InputImage.fromFilePath(context, fileUri)
 
-            Logger.i(MY_TAG, "Start filtering -- photoName: ${photo.photoName} - fileUri: $fileUri")
+            val labelingResult = runImageLabelling(inputImage)
+            Logger.i(MY_TAG, "photoName: ${photo.photoName} - labelingResult: $labelingResult")
+
+            if (labelingResult.isCartoon || labelingResult.isScreenshot || labelingResult.hasText) {
+                return false
+            }
+
+            // OCR check
+            val ocrText = runOcr(inputImage).lowercase()
+
+            if (ocrText.isNotBlank()) {
+                Logger.i(MY_TAG, "photoName: ${photo.photoName} - OCR text is not empty")
+                return false // detected spam text
+            }
+
             Logger.i(MY_TAG, "photoName: ${photo.photoName} - Entered to ML Kit for face check")
             // Step 1: Face detection
             val faces = runMlKit(inputImage)
@@ -83,43 +115,39 @@ class JunkFilter @Inject constructor(
 //            if (faceCount > 1) return true   // group/family photo — accept immediately
 
             Logger.i(MY_TAG, "photoName: ${photo.photoName} - Entered to OCR text check")
-            // OCR check
-            val ocrText = runOcr(inputImage).lowercase()
-
-            if (ocrText.isNotBlank()) {
-                Logger.i(MY_TAG, "photoName: ${photo.photoName} - OCR text is not empty")
-                return false // detected spam text
-            }
 
             Logger.i(
                 MY_TAG,
                 "photoName: ${photo.photoName} - OCR text is empty and entered to blur check"
             )
             // Step 2: 1 face — apply full filtering
-            bitmap = HeicDecoderUtil.decodeBitmap(
-                context = context,
-                fileUri,
-                Size(
-                    prefManager.getImageWidth(),
-                    prefManager.getImageHeight()
-                )
-            )
+//            bitmap = HeicDecoderUtil.decodeBitmap(
+//                context = context,
+//                fileUri,
+//                Size(
+//                    prefManager.getImageWidth(),
+//                    prefManager.getImageHeight()
+//                )
+//            )
+//
+//            if (bitmap == null) {
+//                Logger.i(MY_TAG, "photoName: ${photo.photoName} - Bitmap is null")
+//                return false
+//            }
 
-            if (bitmap == null) {
-                Logger.i(MY_TAG, "photoName: ${photo.photoName} - Bitmap is null")
-                return false
-            }
-
-            val isBlurred = isBlurry(bitmap)
-            Logger.i(MY_TAG, "photoName: ${photo.photoName} - isBlurred: $isBlurred")
-            // Blur check
-            if (isBlurred) return false
+//            val isBlurred = isBlurry(bitmap)
+//            Logger.i(MY_TAG, "photoName: ${photo.photoName} - isBlurred: $isBlurred")
+//            // Blur check
+//            if (isBlurred) return false
 
             Logger.i(MY_TAG, "photoName: ${photo.photoName} - Entered to duplicate check")
             // Duplicate check
-            val hash = hashBitmap(bitmap)
-            if (recentHashes.contains(hash)) return false
-            recentHashes.add(hash)
+//            val hash = hashBitmap(bitmap)
+//            if (recentHashes.contains(hash)) return false
+//            recentHashes.add(hash)
+
+            if (recentUris.contains(fileUri)) return false
+            recentUris.add(fileUri)
 
             Logger.i(MY_TAG, "photoName: ${photo.photoName} - All conditions are satisfied")
             return true
@@ -130,6 +158,42 @@ class JunkFilter @Inject constructor(
             bitmap?.recycle()
         }
     }
+
+    val labeler = ImageLabeling.getClient(ImageLabelerOptions.DEFAULT_OPTIONS)
+
+    private suspend fun runImageLabelling(inputImage: InputImage): OcrResult =
+        suspendCoroutine { continuation ->
+            try {
+                labeler.process(inputImage)
+                    .addOnSuccessListener { labels ->
+                        Logger.i(MY_TAG, "labels: $labels")
+                        val labelTexts = labels.map { it.text.lowercase() }
+                        Logger.i(MY_TAG, "text: $labelTexts")
+                        val hasHuman = labelTexts.any { it in Config.humanKeywords }
+                        val hasCartoon = labelTexts.any { it in Config.cartoonKeywords }
+                        val isFiction = labelTexts.any { it in Config.fictionKeyword }
+                        val hasText = labelTexts.any { it in Config.imageWithTextKeyword }
+                        val isScreenshot = labelTexts.any { it in Config.isScreenshotKeyword }
+
+                        Logger.i(MY_TAG, "hasHuman: $hasHuman, hasCartoon: $hasCartoon")
+
+                        val isCartoonImage = isFiction || (!hasHuman && hasCartoon)
+                        continuation.resume(
+                            OcrResult(
+                                labels = labelTexts.toString(),
+                                isCartoon = isCartoonImage,
+                                hasText = hasText,
+                                isScreenshot = isScreenshot
+                            )
+                        )
+                    }
+                    .addOnFailureListener { e ->
+                        continuation.resumeWithException(e)
+                    }
+            } catch (e: Exception) {
+                continuation.resumeWithException(e)
+            }
+        }
 
     private suspend fun runMlKit(inputImage: InputImage): List<Face> =
         suspendCoroutine { continuation ->

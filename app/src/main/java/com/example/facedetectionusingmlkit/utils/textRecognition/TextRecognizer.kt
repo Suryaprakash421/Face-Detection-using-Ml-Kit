@@ -114,25 +114,9 @@ class TextRecognizer @Inject constructor(
 
     val labeler = ImageLabeling.getClient(ImageLabelerOptions.DEFAULT_OPTIONS)
 
-    private val cartoonKeywords =
-        listOf("cartoon", "animation", "illustration", "art", "toy")
-    private val fictionKeyword =
-        listOf("fiction")
-    private val humanKeywords =
-        listOf(
-            "person",
-            "people",
-            "man",
-            "woman",
-            "face",
-            "selfie",
-            "portrait",
-            "child",
-            "dude",
-            "fun"
-        )
 
-    private suspend fun runImageLabelling(inputImage: InputImage): Pair<List<String>, Boolean> =
+
+    private suspend fun runImageLabelling(inputImage: InputImage): OcrResult =
         suspendCoroutine { continuation ->
             try {
                 labeler.process(inputImage)
@@ -140,14 +124,23 @@ class TextRecognizer @Inject constructor(
                         Logger.i(MY_TAG, "labels: $labels")
                         val labelTexts = labels.map { it.text.lowercase() }
                         Logger.i(MY_TAG, "text: $labelTexts")
-                        val hasHuman = labelTexts.any { it in humanKeywords }
-                        val hasCartoon = labelTexts.any { it in cartoonKeywords }
-                        val isFiction = labelTexts.any { it in fictionKeyword }
+                        val hasHuman = labelTexts.any { it in Config.humanKeywords }
+                        val hasCartoon = labelTexts.any { it in Config.cartoonKeywords }
+                        val isFiction = labelTexts.any { it in Config.fictionKeyword }
+                        val hasText = labelTexts.any { it in Config.imageWithTextKeyword }
+                        val isScreenshot = labelTexts.any { it in Config.isScreenshotKeyword }
 
                         Logger.i(MY_TAG, "hasHuman: $hasHuman, hasCartoon: $hasCartoon")
 
                         val isCartoonImage = isFiction || (!hasHuman && hasCartoon)
-                        continuation.resume(Pair(labelTexts, isCartoonImage))
+                        continuation.resume(
+                            OcrResult(
+                                labels = labelTexts.toString(),
+                                isCartoon = isCartoonImage,
+                                hasText = hasText,
+                                isScreenshot = isScreenshot
+                            )
+                        )
                     }
                     .addOnFailureListener { e ->
                         continuation.resumeWithException(e)
@@ -190,8 +183,8 @@ class TextRecognizer @Inject constructor(
 //            }
 //        }
 
-        val (labels, isCartoon) = runImageLabelling(inputImage)
-        Log.i(MY_TAG, "isCartoon: $isCartoon")
+        val result = runImageLabelling(inputImage)
+        Log.i(MY_TAG, "isCartoon: $result")
 
 
 //        val recognizer = TextRecognition.getClient(ChineseTextRecognizerOptions.Builder().build())
@@ -199,11 +192,7 @@ class TextRecognizer @Inject constructor(
 //        val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
         val ocrText = runOcr(inputImage).lowercase()
         callback.invoke(
-            OcrResult(
-                ocrText = ocrText,
-                labels = labels.toString(),
-                isCartoon = isCartoon
-            )
+            result.copy(ocrText = ocrText)
         )
     }
 

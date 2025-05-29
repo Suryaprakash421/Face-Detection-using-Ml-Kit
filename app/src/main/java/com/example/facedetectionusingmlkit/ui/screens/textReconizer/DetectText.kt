@@ -119,6 +119,16 @@ fun DetectText(
                 Text(it.isCartoon.toString())
             }
             Spacer(Modifier.height(8.dp))
+            Row {
+                TitleText("Is screenshot: ")
+                Text(it.isScreenshot.toString())
+            }
+            Spacer(Modifier.height(8.dp))
+            Row {
+                TitleText("Contains text: ")
+                Text(it.hasText.toString())
+            }
+            Spacer(Modifier.height(8.dp))
             TitleText("Labels: ")
             Text(it.labels)
             Spacer(Modifier.height(8.dp))
