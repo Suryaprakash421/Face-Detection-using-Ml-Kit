@@ -72,7 +72,7 @@ object Config {
     const val KOREAN = 4
 
     val cartoonKeywords =
-        listOf("cartoon", "animation", "illustration", "art", "toy")
+        listOf("cartoon", "animation", "illustration", "art", "toy", "paint", "watercolor paint")
     val fictionKeyword =
         listOf("fiction")
     val imageWithTextKeyword =
