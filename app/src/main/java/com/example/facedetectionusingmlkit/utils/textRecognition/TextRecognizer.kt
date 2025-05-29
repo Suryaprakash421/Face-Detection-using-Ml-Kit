@@ -4,20 +4,44 @@ import android.content.Context
 import android.net.Uri
 import android.util.Log
 import coil.util.CoilUtils.result
+import com.example.facedetectionusingmlkit.data.local.PrefManager
+import com.example.facedetectionusingmlkit.utils.Config
 import com.example.facedetectionusingmlkit.utils.Logger
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.Text
 import com.google.mlkit.vision.text.TextRecognition
+import com.google.mlkit.vision.text.TextRecognizerOptionsInterface
+import com.google.mlkit.vision.text.chinese.ChineseTextRecognizerOptions
+import com.google.mlkit.vision.text.devanagari.DevanagariTextRecognizerOptions
+import com.google.mlkit.vision.text.japanese.JapaneseTextRecognizerOptions
+import com.google.mlkit.vision.text.korean.KoreanTextRecognizerOptions
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
 
-class TextRecognizer(val context: Context) {
+class TextRecognizer @Inject constructor(
+    @ApplicationContext val context: Context, private val prefManager: PrefManager
+) {
 
     companion object {
         private const val MY_TAG = "TextRecognizer"
     }
 
-    val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+    private fun recognitionOption(): TextRecognizerOptionsInterface {
+        val selected = prefManager.getTextRecognition()
+        Log.i("selected", "selected: $selected")
+        return when (prefManager.getTextRecognition()) {
+            Config.LATIN -> TextRecognizerOptions.DEFAULT_OPTIONS
+            Config.CHINESE -> ChineseTextRecognizerOptions.Builder().build()
+            Config.DEVANAGARI -> DevanagariTextRecognizerOptions.Builder().build()
+            Config.JAPANESE -> JapaneseTextRecognizerOptions.Builder().build()
+            Config.KOREAN -> KoreanTextRecognizerOptions.Builder().build()
+            else -> TextRecognizerOptions.DEFAULT_OPTIONS
+        }
+    }
 
+//    val ocrTextRecognizer =
+//        TextRecognition.getClient(recognitionOption())
 
     fun processImage(uri: Uri, callback: (String?) -> Unit) {
         // val bitmap = HeicDecoderUtil.decodeBitmap(context, uri) ?: return // If you use this, handle the return accordingly
@@ -32,14 +56,20 @@ class TextRecognizer(val context: Context) {
 
         Log.i(MY_TAG, "Processing URI: $uri")
 
-        val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+        val ocrTextRecognizer =
+            TextRecognition.getClient(recognitionOption())
 
-        recognizer.process(image)
-            .addOnSuccessListener { visionText ->
+//        val recognizer = TextRecognition.getClient(ChineseTextRecognizerOptions.Builder().build())
+//        val recognizer = TextRecognition.getClient(DevanagariTextRecognizerOptions.Builder().build())
+//        val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+
+        ocrTextRecognizer.process(image).addOnSuccessListener { visionText ->
                 val recognizedText = visionText.text
+                for (block in visionText.textBlocks) {
+                    Log.d("OCR", "Detected block: ${block.text}")
+                }
                 callback(recognizedText) // Pass the recognized text back via the callback
-            }
-            .addOnFailureListener { e ->
+            }.addOnFailureListener { e ->
                 Log.e(MY_TAG, "Text recognition failed", e)
                 callback(null) // Report failure via callback
             }

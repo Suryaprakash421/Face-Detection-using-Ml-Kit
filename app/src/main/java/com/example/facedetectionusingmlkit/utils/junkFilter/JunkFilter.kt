@@ -9,6 +9,7 @@ import androidx.core.graphics.createBitmap
 import androidx.core.graphics.scale
 import com.example.facedetectionusingmlkit.data.local.PrefManager
 import com.example.facedetectionusingmlkit.data.local.entity.GalleryPhotoEntity
+import com.example.facedetectionusingmlkit.utils.Config
 import com.example.facedetectionusingmlkit.utils.HeicDecoderUtil
 import com.example.facedetectionusingmlkit.utils.Logger
 import com.google.mlkit.vision.common.InputImage
@@ -16,6 +17,11 @@ import com.google.mlkit.vision.face.Face
 import com.google.mlkit.vision.face.FaceDetection
 import com.google.mlkit.vision.face.FaceDetectorOptions
 import com.google.mlkit.vision.text.TextRecognition
+import com.google.mlkit.vision.text.TextRecognizerOptionsInterface
+import com.google.mlkit.vision.text.chinese.ChineseTextRecognizerOptions
+import com.google.mlkit.vision.text.devanagari.DevanagariTextRecognizerOptions
+import com.google.mlkit.vision.text.japanese.JapaneseTextRecognizerOptions
+import com.google.mlkit.vision.text.korean.KoreanTextRecognizerOptions
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.nio.ByteBuffer
@@ -42,7 +48,20 @@ class JunkFilter @Inject constructor(
 
     private val faceDetector by lazy { FaceDetection.getClient(option) }
 
-    val ocrTextRecognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+    private fun recognitionOption(): TextRecognizerOptionsInterface {
+        return when (prefManager.getTextRecognition()) {
+            Config.LATIN -> TextRecognizerOptions.DEFAULT_OPTIONS
+            Config.CHINESE -> ChineseTextRecognizerOptions.Builder().build()
+            Config.DEVANAGARI -> DevanagariTextRecognizerOptions.Builder().build()
+            Config.JAPANESE -> JapaneseTextRecognizerOptions.Builder().build()
+            Config.KOREAN -> KoreanTextRecognizerOptions.Builder().build()
+            else -> TextRecognizerOptions.DEFAULT_OPTIONS
+        }
+    }
+
+    val ocrTextRecognizer =
+        TextRecognition.getClient(recognitionOption())
+//    val ocrTextRecognizer = TextRecognition.getClient(DevanagariTextRecognizerOptions.Builder().build())
 
     private val recentHashes = mutableSetOf<String>()
 
@@ -61,7 +80,7 @@ class JunkFilter @Inject constructor(
             Logger.i(MY_TAG, "photoName: ${photo.photoName} - faceCount: $faceCount")
 
             if (faceCount == 0) return false // no face, likely spam
-            if (faceCount > 1) return true   // group/family photo — accept immediately
+//            if (faceCount > 1) return true   // group/family photo — accept immediately
 
             Logger.i(MY_TAG, "photoName: ${photo.photoName} - Entered to OCR text check")
             // OCR check

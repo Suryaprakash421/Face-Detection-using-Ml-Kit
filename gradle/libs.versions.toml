@@ -23,6 +23,10 @@ tensorflowLite = "2.13.0"
 tensorflowLiteGpu = "2.9.0"
 tensorflowLiteTaskVision = "0.3.1"
 textRecognition = "16.0.1"
+textRecognitionChinese = "16.0.1"
+textRecognitionDevanagari = "16.0.1"
+textRecognitionJapanese = "16.0.1"
+textRecognitionKorean = "16.0.1"
 workRuntimeKtx = "2.10.0"
 
 [libraries]
@@ -61,6 +65,10 @@ tensorflow-lite = { module = "org.tensorflow:tensorflow-lite", version.ref = "te
 tensorflow-lite-gpu = { module = "org.tensorflow:tensorflow-lite-gpu", version.ref = "tensorflowLiteGpu" }
 tensorflow-lite-task-vision = { module = "org.tensorflow:tensorflow-lite-task-vision", version.ref = "tensorflowLiteTaskVision" }
 text-recognition = { module = "com.google.mlkit:text-recognition", version.ref = "textRecognition" }
+text-recognition-chinese = { module = "com.google.mlkit:text-recognition-chinese", version.ref = "textRecognitionChinese" }
+text-recognition-devanagari = { module = "com.google.mlkit:text-recognition-devanagari", version.ref = "textRecognitionDevanagari" }
+text-recognition-japanese = { module = "com.google.mlkit:text-recognition-japanese", version.ref = "textRecognitionJapanese" }
+text-recognition-korean = { module = "com.google.mlkit:text-recognition-korean", version.ref = "textRecognitionKorean" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

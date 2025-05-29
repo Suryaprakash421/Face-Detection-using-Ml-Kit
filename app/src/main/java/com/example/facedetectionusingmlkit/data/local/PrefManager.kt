@@ -16,6 +16,7 @@ class PrefManager(
         private const val MIN_THRESHOLD = "minimum_threshold"
         private const val MIN_FACE_SIZE = "minimum_face_size"
         private const val FACE_DETECTION_MODE = "face_detection_mode"
+        private const val TEXT_RECOGNITION = "text_recognition"
         private const val USE_HEIC_DECODER = "use_heic_decoder"
         private const val FACE_PADDING = "face_padding"
         private const val HEIC_IMAGE_PROCESS_TIME = "heic_image_time"
@@ -246,10 +247,16 @@ class PrefManager(
     /**
      * Set image width and height
      * */
-    fun setWidthAndHeight(size: Int, isHeight: Boolean){
+    fun setWidthAndHeight(size: Int, isHeight: Boolean) {
         sp.edit() { putInt(if (isHeight) IMAGE_HEIGHT else IMAGE_WIDTH, size) }
     }
 
     fun getImageWidth(): Int = sp.getInt(IMAGE_WIDTH, 512)
     fun getImageHeight(): Int = sp.getInt(IMAGE_HEIGHT, 512)
+
+    fun setTextRecognition(option: Int) {
+        sp.edit { putInt(TEXT_RECOGNITION, option) }
+    }
+
+    fun getTextRecognition(): Int = sp.getInt(TEXT_RECOGNITION, 0)
 }

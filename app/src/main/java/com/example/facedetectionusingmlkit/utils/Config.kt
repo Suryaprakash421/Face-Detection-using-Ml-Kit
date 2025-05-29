@@ -64,4 +64,10 @@ object Config {
             1800 // Default to 1.8GHz if error occurs
         }
     }
+
+    const val LATIN = 0
+    const val CHINESE = 1
+    const val DEVANAGARI = 2
+    const val JAPANESE = 3
+    const val KOREAN = 4
 }

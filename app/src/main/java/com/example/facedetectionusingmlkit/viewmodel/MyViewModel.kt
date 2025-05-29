@@ -52,6 +52,9 @@ class MyViewModel @Inject constructor(
     val bitmapCreationOption =
         listOf(BitmapCreationMethod.COIL.name, BitmapCreationMethod.HEIC_DECODER.name)
 
+    val textRecognitionOption =
+        listOf("Latin", "Chinese", "Devanagari", "Japanese", "Korean")
+
     /**
      * Flow of Entity changes
      * */

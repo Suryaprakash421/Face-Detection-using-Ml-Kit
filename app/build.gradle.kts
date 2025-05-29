@@ -99,7 +99,13 @@ dependencies {
 
     // ML kit
     implementation(libs.face.detection)
-    implementation (libs.text.recognition)
+
+    // ML text recognizer
+    implementation(libs.text.recognition)  // To recognize Latin script
+    implementation(libs.text.recognition.chinese) // To recognize Chinese script
+    implementation(libs.text.recognition.devanagari)  // To recognize Devanagari script
+    implementation(libs.text.recognition.japanese)    // To recognize Japanese script
+    implementation(libs.text.recognition.korean)  // To recognize Korean script
 
     // TF lite
     implementation(libs.tensorflow.lite)

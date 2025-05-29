@@ -16,12 +16,14 @@ import com.example.facedetectionusingmlkit.route.MyNavigation
 import com.example.facedetectionusingmlkit.ui.components.BottomBarNavigation
 import com.example.facedetectionusingmlkit.ui.components.TopAppBar
 import com.example.facedetectionusingmlkit.ui.theme.FaceDetectionUsingMlKitTheme
+import com.example.facedetectionusingmlkit.utils.textRecognition.TextRecognizer
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     @Inject lateinit var prefManager: PrefManager
+    @Inject lateinit var textRecognizer: TextRecognizer
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -40,7 +42,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize()
                 ) { innerPadding ->
                     Box(modifier = Modifier.padding(innerPadding)) {
-                        MyNavigation(navController, prefManager)
+                        MyNavigation(navController, prefManager, textRecognizer)
                     }
                 }
             }

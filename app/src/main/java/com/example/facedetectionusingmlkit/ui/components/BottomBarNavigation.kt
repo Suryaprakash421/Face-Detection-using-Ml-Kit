@@ -22,7 +22,7 @@ fun BottomBarNavigation(navController: NavController, modifier: Modifier = Modif
     val destinationList = listOf(
         Home,
         Ai,
-//        DetectText,
+        DetectText,
         WhatsApp,
         Settings
     )

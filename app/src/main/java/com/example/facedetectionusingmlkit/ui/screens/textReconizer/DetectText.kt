@@ -17,16 +17,32 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.rememberAsyncImagePainter
+import com.example.facedetectionusingmlkit.data.local.PrefManager
+import com.example.facedetectionusingmlkit.ui.components.MyDropdownMenu
+import com.example.facedetectionusingmlkit.utils.Config
 import com.example.facedetectionusingmlkit.utils.Logger
 import com.example.facedetectionusingmlkit.utils.textRecognition.TextRecognizer
+import com.example.facedetectionusingmlkit.viewmodel.MyViewModel
 
 @Composable
-fun DetectText(modifier: Modifier = Modifier) {
+fun DetectText(
+    prefManager: PrefManager,
+    textRecognizer: TextRecognizer,
+    myViewModel: MyViewModel = hiltViewModel(),
+    modifier: Modifier = Modifier
+) {
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     var recognizedText by remember { mutableStateOf<String?>(null) }
-    val context = LocalContext.current
-    val recognizer = remember { TextRecognizer(context) }
+
+    val textRecognitionOption by remember {
+        mutableStateOf(myViewModel.textRecognitionOption)
+    }
+
+    var selectedIndex by remember { mutableIntStateOf(prefManager.getTextRecognition()) }
+
+    val defaultRecognizer = textRecognitionOption[selectedIndex]
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = PickVisualMedia(),
@@ -38,7 +54,7 @@ fun DetectText(modifier: Modifier = Modifier) {
     // Safe trigger for image recognition
     LaunchedEffect(selectedImageUri) {
         selectedImageUri?.let { uri ->
-            recognizer.processImage(uri) { result ->
+            textRecognizer.processImage(uri) { result ->
                 Logger.i("detectedText", "text: $result")
                 recognizedText = result
             }
@@ -52,6 +68,11 @@ fun DetectText(modifier: Modifier = Modifier) {
             .verticalScroll(scrollState),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
+        RecognitionOption(textRecognitionOption, defaultRecognizer) {
+            val index = textRecognitionOption.indexOf(it)
+            selectedIndex = index
+            prefManager.setTextRecognition(index)
+        }
         Button(
             onClick = {
                 photoPickerLauncher.launch(
@@ -81,5 +102,22 @@ fun DetectText(modifier: Modifier = Modifier) {
             Text(it)
         }
 
+    }
+}
+
+@Composable
+fun RecognitionOption(
+    options: List<String>,
+    default: String,
+    modifier: Modifier = Modifier,
+    onChange: (String) -> Unit
+) {
+    MyDropdownMenu(
+        options = options,
+        selected = default,
+        enabled = true,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        onChange(it)
     }
 }
