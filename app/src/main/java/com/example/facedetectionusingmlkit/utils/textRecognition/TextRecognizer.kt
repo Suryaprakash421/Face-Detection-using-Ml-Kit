@@ -210,6 +210,8 @@ class TextRecognizer @Inject constructor(
     private suspend fun runOcr(image: InputImage): String =
         suspendCoroutine { continuation ->
             try {
+                val ocrTextRecognizer =
+                    TextRecognition.getClient(recognitionOption())
                 ocrTextRecognizer.process(image)
                     .addOnSuccessListener { visionText ->
                         val recognizedText = visionText.text
