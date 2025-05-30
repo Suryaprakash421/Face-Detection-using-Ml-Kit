@@ -89,12 +89,12 @@ class JunkFilter @Inject constructor(
             val fileUri = photo.fileUri
             val inputImage = InputImage.fromFilePath(context, fileUri)
 
-            val labelingResult = runImageLabelling(inputImage)
-            Logger.i(MY_TAG, "photoName: ${photo.photoName} - labelingResult: $labelingResult")
-
-            if (labelingResult.isCartoon || labelingResult.isScreenshot || labelingResult.hasText) {
-                return false
-            }
+//            val labelingResult = runImageLabelling(inputImage)
+//            Logger.i(MY_TAG, "photoName: ${photo.photoName} - labelingResult: $labelingResult")
+//
+//            if (labelingResult.isCartoon || labelingResult.isScreenshot || labelingResult.hasText) {
+//                return false
+//            }
 
             // OCR check
             val ocrText = runOcr(inputImage).lowercase()
@@ -161,39 +161,39 @@ class JunkFilter @Inject constructor(
 
     val labeler = ImageLabeling.getClient(ImageLabelerOptions.DEFAULT_OPTIONS)
 
-    private suspend fun runImageLabelling(inputImage: InputImage): OcrResult =
-        suspendCoroutine { continuation ->
-            try {
-                labeler.process(inputImage)
-                    .addOnSuccessListener { labels ->
-                        Logger.i(MY_TAG, "labels: $labels")
-                        val labelTexts = labels.map { it.text.lowercase() }
-                        Logger.i(MY_TAG, "text: $labelTexts")
-                        val hasHuman = labelTexts.any { it in Config.humanKeywords }
-                        val hasCartoon = labelTexts.any { it in Config.cartoonKeywords }
-                        val isFiction = labelTexts.any { it in Config.fictionKeyword }
-                        val hasText = labelTexts.any { it in Config.imageWithTextKeyword }
-                        val isScreenshot = labelTexts.any { it in Config.isScreenshotKeyword }
-
-                        Logger.i(MY_TAG, "hasHuman: $hasHuman, hasCartoon: $hasCartoon")
-
-                        val isCartoonImage = isFiction || (!hasHuman && hasCartoon)
-                        continuation.resume(
-                            OcrResult(
-                                labels = labelTexts.toString(),
-                                isCartoon = isCartoonImage,
-                                hasText = hasText,
-                                isScreenshot = isScreenshot
-                            )
-                        )
-                    }
-                    .addOnFailureListener { e ->
-                        continuation.resumeWithException(e)
-                    }
-            } catch (e: Exception) {
-                continuation.resumeWithException(e)
-            }
-        }
+//    private suspend fun runImageLabelling(inputImage: InputImage): OcrResult =
+//        suspendCoroutine { continuation ->
+//            try {
+//                labeler.process(inputImage)
+//                    .addOnSuccessListener { labels ->
+//                        Logger.i(MY_TAG, "labels: $labels")
+//                        val labelTexts = labels.map { it.text.lowercase() }
+//                        Logger.i(MY_TAG, "text: $labelTexts")
+//                        val hasHuman = labelTexts.any { it in Config.humanKeywords }
+//                        val hasCartoon = labelTexts.any { it in Config.cartoonKeywords }
+//                        val isFiction = labelTexts.any { it in Config.fictionKeyword }
+//                        val hasText = labelTexts.any { it in Config.imageWithTextKeyword }
+//                        val isScreenshot = labelTexts.any { it in Config.isScreenshotKeyword }
+//
+//                        Logger.i(MY_TAG, "hasHuman: $hasHuman, hasCartoon: $hasCartoon")
+//
+//                        val isCartoonImage = isFiction || (!hasHuman && hasCartoon)
+//                        continuation.resume(
+//                            OcrResult(
+//                                labels = labelTexts.toString(),
+//                                isCartoon = isCartoonImage,
+//                                hasText = hasText,
+//                                isScreenshot = isScreenshot
+//                            )
+//                        )
+//                    }
+//                    .addOnFailureListener { e ->
+//                        continuation.resumeWithException(e)
+//                    }
+//            } catch (e: Exception) {
+//                continuation.resumeWithException(e)
+//            }
+//        }
 
     private suspend fun runMlKit(inputImage: InputImage): List<Face> =
         suspendCoroutine { continuation ->

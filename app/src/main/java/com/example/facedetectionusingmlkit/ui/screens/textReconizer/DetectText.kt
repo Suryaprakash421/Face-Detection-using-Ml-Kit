@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.rememberAsyncImagePainter
 import com.example.facedetectionusingmlkit.data.local.PrefManager
+import com.example.facedetectionusingmlkit.domain.model.ImageFilterResult
 import com.example.facedetectionusingmlkit.domain.model.OcrResult
 import com.example.facedetectionusingmlkit.ui.components.MyDropdownMenu
 import com.example.facedetectionusingmlkit.utils.Logger
@@ -50,7 +51,8 @@ fun DetectText(
     modifier: Modifier = Modifier
 ) {
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
-    var recognizedText by remember { mutableStateOf<OcrResult?>(null) }
+    var recognizedText by remember { mutableStateOf<ImageFilterResult?>(null) }
+//    var recognizedText by remember { mutableStateOf<OcrResult?>(null) }
 
     val textRecognitionOption by remember {
         mutableStateOf(myViewModel.textRecognitionOption)
@@ -115,23 +117,45 @@ fun DetectText(
         Spacer(Modifier.height(10.dp))
         recognizedText?.let {
             Row {
-                TitleText("Is cartoon: ")
-                Text(it.isCartoon.toString())
+                TitleText("Should process photo: ")
+                Text(it.shouldProcessForFaceDetection.toString())
             }
             Spacer(Modifier.height(8.dp))
+
+            Row {
+                TitleText("Is human: ")
+                Text(it.hasConfidentHuman.toString())
+            }
+            Spacer(Modifier.height(8.dp))
+
+            Row {
+                TitleText("Is cartoon: ")
+                Text(it.isStronglyCartoonOrArt.toString())
+            }
+            Spacer(Modifier.height(8.dp))
+
+            Row {
+                TitleText("Is Toy: ")
+                Text(it.isLikelyToy.toString())
+            }
+            Spacer(Modifier.height(8.dp))
+
             Row {
                 TitleText("Is screenshot: ")
-                Text(it.isScreenshot.toString())
+                Text(it.isPriorityFilterScreenshot.toString())
             }
             Spacer(Modifier.height(8.dp))
+
             Row {
                 TitleText("Contains text: ")
-                Text(it.hasText.toString())
+                Text(it.isPriorityFilterTextHeavy.toString())
             }
             Spacer(Modifier.height(8.dp))
+
             TitleText("Labels: ")
-            Text(it.labels)
+            Text(it.originalLabelsWithConfidence.toString())
             Spacer(Modifier.height(8.dp))
+
             TitleText("OCR Extracted: ")
             Text(it.ocrText)
         }

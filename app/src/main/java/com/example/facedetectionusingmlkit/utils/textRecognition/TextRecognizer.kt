@@ -34,6 +34,7 @@ import kotlin.coroutines.suspendCoroutine
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Matrix
+import com.example.facedetectionusingmlkit.domain.model.ImageFilterResult
 import com.example.facedetectionusingmlkit.domain.model.OcrResult
 import com.google.mlkit.vision.label.ImageLabeling
 import com.google.mlkit.vision.label.defaults.ImageLabelerOptions
@@ -115,45 +116,147 @@ class TextRecognizer @Inject constructor(
     val labeler = ImageLabeling.getClient(ImageLabelerOptions.DEFAULT_OPTIONS)
 
 
+//    private suspend fun runImageLabelling(inputImage: InputImage): OcrResult =
+//        suspendCoroutine { continuation ->
+//            try {
+//                labeler.process(inputImage)
+//                    .addOnSuccessListener { labels ->
+//                        Logger.i(MY_TAG, "labels: $labels")
+//                        val labelTexts = labels.map { it.text.lowercase() }
+//                        Logger.i(MY_TAG, "text: $labelTexts")
+//                        val hasHuman = labelTexts.any { it in Config.humanKeywords }
+//                        val hasCartoon = labelTexts.any { it in Config.cartoonKeywords }
+//                        val isFiction = labelTexts.any { it in Config.fictionKeyword }
+//                        val hasText = labelTexts.any { it in Config.imageWithTextKeyword }
+//                        val isScreenshot = labelTexts.any { it in Config.isScreenshotKeyword }
+//
+//                        Logger.i(MY_TAG, "hasHuman: $hasHuman, hasCartoon: $hasCartoon")
+//
+//                        val isCartoonImage = isFiction || (!hasHuman && hasCartoon)
+//                        continuation.resume(
+//                            OcrResult(
+//                                labels = labelTexts.toString(),
+//                                isCartoon = isCartoonImage,
+//                                hasText = hasText,
+//                                isScreenshot = isScreenshot
+//                            )
+//                        )
+//                    }
+//                    .addOnFailureListener { e ->
+//                        continuation.resumeWithException(e)
+//                    }
+//            } catch (e: Exception) {
+//                continuation.resumeWithException(e)
+//            }
+//        }
 
-    private suspend fun runImageLabelling(inputImage: InputImage): OcrResult =
+    private suspend fun filterImageByType(inputImage: InputImage): ImageFilterResult =
         suspendCoroutine { continuation ->
             try {
+                val options = ImageLabelerOptions.Builder()
+                    .setConfidenceThreshold(0.5f) // Initial threshold for getting labels
+                    .build()
+                val labeler = ImageLabeling.getClient(options)
+
                 labeler.process(inputImage)
                     .addOnSuccessListener { labels ->
-                        Logger.i(MY_TAG, "labels: $labels")
-                        val labelTexts = labels.map { it.text.lowercase() }
-                        Logger.i(MY_TAG, "text: $labelTexts")
-                        val hasHuman = labelTexts.any { it in Config.humanKeywords }
-                        val hasCartoon = labelTexts.any { it in Config.cartoonKeywords }
-                        val isFiction = labelTexts.any { it in Config.fictionKeyword }
-                        val hasText = labelTexts.any { it in Config.imageWithTextKeyword }
-                        val isScreenshot = labelTexts.any { it in Config.isScreenshotKeyword }
+                        val labelDetails = labels.associate { it.text.lowercase() to it.confidence }
+                        Logger.i(MY_TAG, "Labels returned: $labelDetails")
 
-                        Logger.i(MY_TAG, "hasHuman: $hasHuman, hasCartoon: $hasCartoon")
+                        // --- Determine individual characteristics of the image ---
+                        val hasConfidentHuman = labelDetails.any { (text, confidence) ->
+                            text in Config.humanKeywords && confidence >= Config.HUMAN_CONFIDENCE_THRESHOLD
+                        }
 
-                        val isCartoonImage = isFiction || (!hasHuman && hasCartoon)
+                        val isStronglyCartoonOrArt = labelDetails.any { (text, confidence) ->
+                            text in Config.cartoonArtKeywords && confidence >= Config.CARTOON_ART_CONFIDENCE_THRESHOLD
+                        }
+
+                        val isPriorityFilterTextHeavy = labelDetails.any { (text, confidence) ->
+                            text in Config.textHeavyKeywords && confidence >= Config.TEXT_HEAVY_CONFIDENCE_THRESHOLD
+                        }
+
+                        val isPriorityFilterScreenshot = labelDetails.any { (text, confidence) ->
+                            text in Config.screenshotKeywords && confidence >= Config.SCREENSHOT_CONFIDENCE_THRESHOLD
+                        }
+
+                        val isLikelyToy = labelDetails.any { (text, confidence) ->
+                            text in Config.toyKeywords && confidence >= Config.TOY_CONFIDENCE_THRESHOLD
+                        }
+
+                        // --- New Core Filtering Decision Logic ---
+                        var processImage: Boolean
+
+                        if (isPriorityFilterTextHeavy) {
+                            // 1. If text-heavy, filter out, regardless of human presence.
+                            processImage = false
+                            Logger.i(MY_TAG, "PRIORITY FILTER: Text heavy detected. Filtering OUT.")
+                        } else if (isPriorityFilterScreenshot) {
+                            // 2. Else, if it's a screenshot, filter out, regardless of human presence.
+                            processImage = false
+                            Logger.i(MY_TAG, "PRIORITY FILTER: Screenshot detected. Filtering OUT.")
+                        } else if (isStronglyCartoonOrArt) {
+                            // 3. Else, if it's strongly cartoon/art, filter out.
+                            // This handles cartoon faces correctly even if "face" is detected.
+                            processImage = false
+                            Logger.i(
+                                MY_TAG,
+                                "PRIORITY FILTER: Strong cartoon/art detected. Filtering OUT."
+                            )
+                        } else if (!hasConfidentHuman && isLikelyToy) {
+                            processImage = false
+                        } else {
+                            // 4. If none of the above priority filters are met, THEN check for human presence.
+                            processImage = true
+
+//                            if (hasConfidentHuman) {
+//                                // Human present, and not text/screenshot/cartoon -> process.
+//                                processImage = true
+//                                Logger.i(MY_TAG, "Human detected, and not a priority filter type. Processing.")
+//                            } else {
+//                                // No confident human, and not text/screenshot/cartoon.
+//                                // Filter out other unwanted content (e.g., just a toy, landscape, object).
+//                                processImage = false
+//                                Logger.i(MY_TAG, "No human detected, and not a priority filter type. Filtering OUT (e.g., toy, object, landscape).")
+//                            }
+                        }
+
                         continuation.resume(
-                            OcrResult(
-                                labels = labelTexts.toString(),
-                                isCartoon = isCartoonImage,
-                                hasText = hasText,
-                                isScreenshot = isScreenshot
+                            ImageFilterResult(
+                                originalLabelsWithConfidence = labelDetails,
+                                hasConfidentHuman = hasConfidentHuman,
+                                isStronglyCartoonOrArt = isStronglyCartoonOrArt,
+                                isPriorityFilterTextHeavy = isPriorityFilterTextHeavy,
+                                isPriorityFilterScreenshot = isPriorityFilterScreenshot,
+                                isLikelyToy = isLikelyToy, // Still useful for full context if needed later
+                                shouldProcessForFaceDetection = processImage
                             )
                         )
                     }
                     .addOnFailureListener { e ->
-                        continuation.resumeWithException(e)
+                        Logger.e(MY_TAG, "Image labeling failed - $e")
+                        continuation.resume(
+                            ImageFilterResult( // Default to not processing on failure
+                                originalLabelsWithConfidence = emptyMap(),
+                                hasConfidentHuman = false,
+                                isStronglyCartoonOrArt = false,
+                                isPriorityFilterTextHeavy = false,
+                                isPriorityFilterScreenshot = false,
+                                isLikelyToy = false,
+                                shouldProcessForFaceDetection = false
+                            )
+                        )
                     }
             } catch (e: Exception) {
-                continuation.resumeWithException(e)
+                Logger.e(MY_TAG, "Exception in image labeling - $e")
+                continuation.resumeWithException(e) // Or return a default ImageFilterResult
             }
         }
 
     val ocrTextRecognizer =
         TextRecognition.getClient(recognitionOption())
 
-    suspend fun processImage(uri: Uri, callback: (OcrResult?) -> Unit) {
+    suspend fun processImage(uri: Uri, callback: (ImageFilterResult?) -> Unit) {
         // val bitmap = HeicDecoderUtil.decodeBitmap(context, uri) ?: return // If you use this, handle the return accordingly
         val inputImage: InputImage
         try {
@@ -183,7 +286,8 @@ class TextRecognizer @Inject constructor(
 //            }
 //        }
 
-        val result = runImageLabelling(inputImage)
+        val result = filterImageByType(inputImage)
+//        val result = runImageLabelling(inputImage)
         Log.i(MY_TAG, "isCartoon: $result")
 
 

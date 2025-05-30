@@ -17,7 +17,8 @@ object Config {
     }
 
     const val PARALLEL_COUNT = 3
-//    val PARALLEL_COUNT = Runtime.getRuntime().availableProcessors() - 2
+
+    //    val PARALLEL_COUNT = Runtime.getRuntime().availableProcessors() - 2
     val BATCH_SIZE = calculateBatchSize()
 
     const val FACES_FOLDER = "faces"
@@ -71,25 +72,93 @@ object Config {
     const val JAPANESE = 3
     const val KOREAN = 4
 
-    val cartoonKeywords =
-        listOf("cartoon", "animation", "illustration", "art", "toy", "paint", "watercolor paint")
-    val fictionKeyword =
-        listOf("fiction")
-    val imageWithTextKeyword =
-        listOf("poster", "paper", "pattern", "asphalt")
-    val isScreenshotKeyword =
-        listOf("screenshot")
-    val humanKeywords =
-        listOf(
-            "person",
-            "people",
-            "man",
-            "woman",
-            "face",
-            "selfie",
-            "portrait",
-            "child",
-            "dude",
-            "fun"
-        )
+//    val cartoonKeywords =
+//        listOf("cartoon", "animation", "illustration", "art", "toy", "paint", "watercolor paint")
+//    val fictionKeyword =
+//        listOf("fiction")
+//    val imageWithTextKeyword =
+//        listOf("poster", "paper", "pattern", "asphalt")
+//    val isScreenshotKeyword =
+//        listOf("screenshot")
+//    val humanKeywords =
+//        listOf(
+//            "person",
+//            "people",
+//            "man",
+//            "woman",
+//            "face",
+//            "selfie",
+//            "portrait",
+//            "child",
+//            "dude",
+//            "fun"
+//        )
+
+    // Keywords that strongly indicate a real human presence
+    val humanKeywords = setOf(
+        "person", "people", "man", "fun", "woman", "face", "selfie", "portrait", "child",
+        "adult", "youth", "boy", "girl", "crowd", "human", "figure", "pedestrian",
+        "smile", "hairstyle" // Often co-occur with humans
+    )
+
+    // Keywords indicating the image is likely a cartoon, art, or illustration
+    val cartoonArtKeywords = setOf(
+        "cartoon", "fiction", "animation", "comics", "anime", "manga", "illustration", "drawing",
+        "sketch", "artwork", "painting", "watercolor paint", "oil paint", "graphic design",
+        "cgi", "computer graphics", "render", "clip art", "line art", "doodle"
+    )
+
+    // Keywords indicating the image is likely text-heavy or a document
+    val textHeavyKeywords = setOf(
+        "text",
+        "font",
+        "document",
+        "paper",
+        "asphalt",
+        "pattern",
+        "form",
+        "letter",
+        "handwriting",
+        "calligraphy",
+        "poster",
+        "sign",
+        "banner",
+        "label",
+        "book",
+        "magazine",
+        "newspaper",
+        "brochure",
+        "flyer",
+        "notepad",
+        "memo",
+        "typography",
+        "caption",
+        "headline",
+        "menu"
+    )
+
+    // Keywords indicating the image is likely a screenshot
+    val screenshotKeywords = setOf(
+        "screenshot", "screen capture", "web page", "software", "application", "user interface",
+        "gui", "window", "desktop", "mobile phone screen", "computer screen", "snapshot"
+    )
+
+    // Keywords for toys (handle carefully, as humans might be present with toys)
+    val toyKeywords = setOf(
+        "toy", "doll", "figurine", "action figure", "stuffed animal", "plush", "plaything", "stuffed toy"
+    )
+
+    // Keywords for abstract/other things to potentially filter if no human
+    val otherFilterKeywords = setOf(
+        "pattern",
+        "texture",
+        "close-up" // If these are dominant and no human, might not be a face photo
+    )
+
+    // Confidence thresholds (adjust based on testing)
+    const val HUMAN_CONFIDENCE_THRESHOLD = 0.6f
+    const val CARTOON_ART_CONFIDENCE_THRESHOLD = 0.5f
+    const val TEXT_HEAVY_CONFIDENCE_THRESHOLD = 0.5f
+    const val SCREENSHOT_CONFIDENCE_THRESHOLD = 0.7f
+    const val TOY_CONFIDENCE_THRESHOLD = 0.5f
 }
