@@ -14,6 +14,7 @@ import com.example.facedetectionusingmlkit.domain.model.OcrResult
 import com.example.facedetectionusingmlkit.utils.Config
 import com.example.facedetectionusingmlkit.utils.HeicDecoderUtil
 import com.example.facedetectionusingmlkit.utils.Logger
+import com.example.facedetectionusingmlkit.utils.textRecognition.TextRecognizer
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.face.Face
 import com.google.mlkit.vision.face.FaceDetection
@@ -39,7 +40,8 @@ import kotlin.coroutines.suspendCoroutine
 
 class JunkFilter @Inject constructor(
     @ApplicationContext val context: Context,
-    private val prefManager: PrefManager
+    private val prefManager: PrefManager,
+    private val textRecognizer: TextRecognizer
 ) {
     companion object {
         private const val MY_TAG = "JunkFilter"
@@ -79,7 +81,10 @@ class JunkFilter @Inject constructor(
             val file = File(photo.filePath)
 
             val validSize = file.length() < MIN_SIZE
-            Logger.i(MY_TAG, "Start filtering -- photoName: ${photo.photoName}, validSize: $validSize")
+            Logger.i(
+                MY_TAG,
+                "Start filtering -- photoName: ${photo.photoName}, validSize: $validSize"
+            )
 
             // File is less than 50KB, so return early
             if (validSize) {
@@ -97,12 +102,17 @@ class JunkFilter @Inject constructor(
 //            }
 
             // OCR check
-            val ocrText = runOcr(inputImage).lowercase()
+            val ocrResult = textRecognizer.filterImageByType(inputImage)
 
-            if (ocrText.isNotBlank()) {
-                Logger.i(MY_TAG, "photoName: ${photo.photoName} - OCR text is not empty")
-                return false // detected spam text
+            if (!ocrResult.shouldProcessForFaceDetection) {
+                return false
             }
+//            val ocrText = runOcr(inputImage).lowercase()
+//
+//            if (ocrText.isNotBlank()) {
+//                Logger.i(MY_TAG, "photoName: ${photo.photoName} - OCR text is not empty")
+//                return false // detected spam text
+//            }
 
             Logger.i(MY_TAG, "photoName: ${photo.photoName} - Entered to ML Kit for face check")
             // Step 1: Face detection

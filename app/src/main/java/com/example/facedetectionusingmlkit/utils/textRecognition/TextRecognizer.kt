@@ -150,7 +150,7 @@ class TextRecognizer @Inject constructor(
 //            }
 //        }
 
-    private suspend fun filterImageByType(inputImage: InputImage): ImageFilterResult =
+    suspend fun filterImageByType(inputImage: InputImage): ImageFilterResult =
         suspendCoroutine { continuation ->
             try {
                 val options = ImageLabelerOptions.Builder()
