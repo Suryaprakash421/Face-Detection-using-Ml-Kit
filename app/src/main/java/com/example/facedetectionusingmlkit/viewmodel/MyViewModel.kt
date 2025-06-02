@@ -1,6 +1,8 @@
 package com.example.facedetectionusingmlkit.viewmodel
 
 import android.app.Application
+import android.net.Uri
+import android.provider.MediaStore
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -10,10 +12,13 @@ import com.example.facedetectionusingmlkit.data.local.PrefManager
 import com.example.facedetectionusingmlkit.data.local.entity.GalleryPhotoEntity
 import com.example.facedetectionusingmlkit.data.repositories.MyRepository
 import com.example.facedetectionusingmlkit.domain.model.AiModel
+import com.example.facedetectionusingmlkit.domain.model.FaceDetectionResult
 import com.example.facedetectionusingmlkit.domain.usecase.GetDetectedFaceUseCase
 import com.example.facedetectionusingmlkit.utils.BitmapCreationMethod
 import com.example.facedetectionusingmlkit.utils.FaceDetectionMethods
 import com.example.facedetectionusingmlkit.utils.Logger
+import com.example.facedetectionusingmlkit.utils.faceDetection.FaceDetector
+import com.example.facedetectionusingmlkit.utils.faceDetection.FaceFilterKeys
 import com.example.facedetectionusingmlkit.utils.junkFilter.JunkFilter
 import com.example.facedetectionusingmlkit.workmanager.FaceDetectionWorker
 import com.example.facedetectionusingmlkit.workmanager.startWorker
@@ -39,7 +44,8 @@ class MyViewModel @Inject constructor(
     private val workManager: WorkManager,
     private val prefManager: PrefManager,
     private val getDetectedFaceUseCase: GetDetectedFaceUseCase,
-    private val junkFilter: JunkFilter
+    private val junkFilter: JunkFilter,
+    private val faceDetector: FaceDetector
 ) : AndroidViewModel(application) {
 
     companion object {
@@ -198,4 +204,63 @@ class MyViewModel @Inject constructor(
         }
     }
 
+    private val _faceResults = MutableStateFlow<List<FaceDetectionResult>>(emptyList())
+    val faceResults: StateFlow<List<FaceDetectionResult>> = _faceResults.asStateFlow()
+
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+
+    private val _errorMessage = MutableStateFlow<String?>(null)
+    val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
+
+    // Mapping keys to display-friendly titles
+    private val displayTitles = mapOf(
+        FaceFilterKeys.FACE_INDEX to "Face #",
+        FaceFilterKeys.TOTAL_DETECTED_FACES_IN_IMAGE to "Total Faces in Image",
+        FaceFilterKeys.FACE_SIZE_VALID to "Size Valid",
+        FaceFilterKeys.POSE_VALID to "Pose Valid",
+        FaceFilterKeys.EYES_WELL_SEPARATED to "Eyes Separated",
+        FaceFilterKeys.IS_BLURRED to "Is Blurry", // True if blurry
+        FaceFilterKeys.LAPLACIAN_VARIANCE to "Laplacian Variance",
+        FaceFilterKeys.BRIGHTNESS_VALID to "Brightness Valid",
+        FaceFilterKeys.IS_FACE_CONSIDERED_CLEAR to "Overall Clear",
+        FaceFilterKeys.PROCESSING_ERROR to "Error"
+    )
+
+    fun processImage(uri: Uri) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _errorMessage.value = null
+            _faceResults.value = emptyList()
+            try {
+                @Suppress("DEPRECATION") // Using getBitmap for simplicity, consider modern alternatives for scoped storage if needed
+                val bitmap = MediaStore.Images.Media.getBitmap(
+                    getApplication<Application>().contentResolver,
+                    uri
+                )
+
+                // For gallery images, rotation is often 0.
+                // For camera captures, you might need to read EXIF data for correct rotation.
+                val rotationDegrees = 0
+
+                val results = faceDetector.getClearFaces(bitmap, rotationDegrees)
+
+                if (results.isEmpty() && bitmap != null) {
+                    _errorMessage.value =
+                        "No face details to display. ML Kit might not have found faces, or all failed processing steps like cropping."
+                }
+                _faceResults.value = results
+
+            } catch (e: Exception) {
+                Log.e("FaceExtractViewModel", "Error processing image", e)
+                _errorMessage.value = "Error processing image: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun getDisplayTitle(key: String): String {
+        return displayTitles[key] ?: key // Fallback to the key itself if not found
+    }
 }
