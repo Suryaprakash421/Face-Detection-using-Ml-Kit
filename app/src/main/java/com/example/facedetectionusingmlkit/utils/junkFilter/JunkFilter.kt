@@ -29,6 +29,8 @@ import com.google.mlkit.vision.text.japanese.JapaneseTextRecognizerOptions
 import com.google.mlkit.vision.text.korean.KoreanTextRecognizerOptions
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.nio.ByteBuffer
 import java.security.MessageDigest
@@ -75,24 +77,25 @@ class JunkFilter @Inject constructor(
     private val recentHashes = mutableSetOf<String>()
     private val recentUris = mutableSetOf<Uri>()
 
-    suspend fun isRelevantFamilyOrFriendPhoto(photo: GalleryPhotoEntity): Boolean {
-        var bitmap: Bitmap? = null
-        try {
-            val file = File(photo.filePath)
+    suspend fun isRelevantFamilyOrFriendPhoto(photo: GalleryPhotoEntity): Boolean =
+        withContext(Dispatchers.Default) {
+            var bitmap: Bitmap? = null
+            try {
+                val file = File(photo.filePath)
 
-            val validSize = file.length() < MIN_SIZE
-            Logger.i(
-                MY_TAG,
-                "Start filtering -- photoName: ${photo.photoName}, validSize: $validSize"
-            )
+                val validSize = file.length() < MIN_SIZE
+                Logger.i(
+                    MY_TAG,
+                    "Start filtering -- photoName: ${photo.photoName}, validSize: $validSize"
+                )
 
-            // File is less than 50KB, so return early
-            if (validSize) {
-                return false
-            }
+                // File is less than 50KB, so return early
+                if (validSize) {
+                    return@withContext false
+                }
 
-            val fileUri = photo.fileUri
-            val inputImage = InputImage.fromFilePath(context, fileUri)
+                val fileUri = photo.fileUri
+                val inputImage = InputImage.fromFilePath(context, fileUri)
 
 //            val labelingResult = runImageLabelling(inputImage)
 //            Logger.i(MY_TAG, "photoName: ${photo.photoName} - labelingResult: $labelingResult")
@@ -101,36 +104,38 @@ class JunkFilter @Inject constructor(
 //                return false
 //            }
 
-            // OCR check
-            val ocrResult = textRecognizer.filterImageByType(inputImage)
+                // OCR check
+                val imageLabeling = textRecognizer.filterImageByType(inputImage)
+                Logger.i(MY_TAG, "photoName: ${photo.photoName} - imageLabeling: $imageLabeling")
 
-            if (!ocrResult.shouldProcessForFaceDetection) {
-                return false
-            }
-//            val ocrText = runOcr(inputImage).lowercase()
-//
-//            if (ocrText.isNotBlank()) {
-//                Logger.i(MY_TAG, "photoName: ${photo.photoName} - OCR text is not empty")
-//                return false // detected spam text
-//            }
+                if (!imageLabeling.shouldProcessForFaceDetection) {
+                    return@withContext false
+                }
 
-            Logger.i(MY_TAG, "photoName: ${photo.photoName} - Entered to ML Kit for face check")
-            // Step 1: Face detection
-            val faces = runMlKit(inputImage)
-            val faceCount = faces.size
+                val ocrText = runOcr(inputImage).lowercase()
 
-            Logger.i(MY_TAG, "photoName: ${photo.photoName} - faceCount: $faceCount")
+                if (ocrText.isNotBlank()) {
+                    Logger.i(MY_TAG, "photoName: ${photo.photoName} - OCR text is not empty")
+                    return@withContext false // detected spam text
+                }
 
-            if (faceCount == 0) return false // no face, likely spam
+                Logger.i(MY_TAG, "photoName: ${photo.photoName} - Entered to ML Kit for face check")
+                // Step 1: Face detection
+                val faces = runMlKit(inputImage)
+                val faceCount = faces.size
+
+                Logger.i(MY_TAG, "photoName: ${photo.photoName} - faceCount: $faceCount")
+
+                if (faceCount == 0) return@withContext false // no face, likely spam
 //            if (faceCount > 1) return true   // group/family photo — accept immediately
 
-            Logger.i(MY_TAG, "photoName: ${photo.photoName} - Entered to OCR text check")
+                Logger.i(MY_TAG, "photoName: ${photo.photoName} - Entered to OCR text check")
 
-            Logger.i(
-                MY_TAG,
-                "photoName: ${photo.photoName} - OCR text is empty and entered to blur check"
-            )
-            // Step 2: 1 face — apply full filtering
+                Logger.i(
+                    MY_TAG,
+                    "photoName: ${photo.photoName} - OCR text is empty and entered to blur check"
+                )
+                // Step 2: 1 face — apply full filtering
 //            bitmap = HeicDecoderUtil.decodeBitmap(
 //                context = context,
 //                fileUri,
@@ -150,24 +155,24 @@ class JunkFilter @Inject constructor(
 //            // Blur check
 //            if (isBlurred) return false
 
-            Logger.i(MY_TAG, "photoName: ${photo.photoName} - Entered to duplicate check")
-            // Duplicate check
+                Logger.i(MY_TAG, "photoName: ${photo.photoName} - Entered to duplicate check")
+                // Duplicate check
 //            val hash = hashBitmap(bitmap)
 //            if (recentHashes.contains(hash)) return false
 //            recentHashes.add(hash)
 
-            if (recentUris.contains(fileUri)) return false
-            recentUris.add(fileUri)
+                if (recentUris.contains(fileUri)) false
+                recentUris.add(fileUri)
 
-            Logger.i(MY_TAG, "photoName: ${photo.photoName} - All conditions are satisfied")
-            return true
-        } catch (e: Exception) {
-            Logger.e(MY_TAG, "photoName: ${photo.photoName} - Exception: ${e.message}")
-            return false
-        } finally {
-            bitmap?.recycle()
+                Logger.i(MY_TAG, "photoName: ${photo.photoName} - All conditions are satisfied")
+                return@withContext true
+            } catch (e: Exception) {
+                Logger.e(MY_TAG, "photoName: ${photo.photoName} - Exception: ${e.message}")
+                return@withContext false
+            } finally {
+                bitmap?.recycle()
+            }
         }
-    }
 
     val labeler = ImageLabeling.getClient(ImageLabelerOptions.DEFAULT_OPTIONS)
 
