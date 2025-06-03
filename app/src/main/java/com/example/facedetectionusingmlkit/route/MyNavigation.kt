@@ -8,7 +8,6 @@ import com.example.facedetectionusingmlkit.data.local.PrefManager
 import com.example.facedetectionusingmlkit.ui.screens.setting.Settings
 import com.example.facedetectionusingmlkit.ui.screens.ai.AiScreen
 import com.example.facedetectionusingmlkit.ui.screens.home.HomeScreen
-import com.example.facedetectionusingmlkit.ui.screens.textReconizer.DetectText
 import com.example.facedetectionusingmlkit.ui.screens.textReconizer.TestTab
 import com.example.facedetectionusingmlkit.ui.screens.whatsApp.WhatsAppTabScreen
 import com.example.facedetectionusingmlkit.utils.textRecognition.TextRecognizer
@@ -29,7 +28,7 @@ fun MyNavigation(
         composable(Settings.route) {
             Settings(prefManager)
         }
-        composable(DetectText.route) {
+        composable(Playground.route) {
             TestTab(prefManager, textRecognizer)
         }
         composable(WhatsApp.route) {

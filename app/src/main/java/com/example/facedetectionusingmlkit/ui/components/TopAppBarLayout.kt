@@ -2,7 +2,6 @@ package com.example.facedetectionusingmlkit.ui.components
 
 import android.content.Context
 import android.util.Log
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
@@ -28,6 +27,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.work.WorkInfo
 import com.example.facedetectionusingmlkit.data.local.PrefManager
 import com.example.facedetectionusingmlkit.route.Ai
+import com.example.facedetectionusingmlkit.route.Playground
 import com.example.facedetectionusingmlkit.route.Home
 import com.example.facedetectionusingmlkit.route.Settings
 import com.example.facedetectionusingmlkit.route.WhatsApp
@@ -53,6 +53,7 @@ fun TopAppBar(
     val currentScreen = when (currentDestination) {
         Home.route -> Home
         Ai.route -> Ai
+        Playground.route -> Playground
         WhatsApp.route -> WhatsApp
         Settings.route -> Settings
         else -> Home

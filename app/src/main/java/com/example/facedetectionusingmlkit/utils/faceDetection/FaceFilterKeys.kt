@@ -3,6 +3,9 @@ package com.example.facedetectionusingmlkit.utils.faceDetection
 object FaceFilterKeys {
     const val TOTAL_DETECTED_FACES_IN_IMAGE = "TotalDetectedFacesInImage"
     const val FACE_SIZE_VALID = "IsFaceSizeValid"
+    const val FACE_DIMENSION = "FaceDimension"
+    const val MIN_FACE_SIZE = "MinSizeRequired"
+    const val MIN_PERCENTAGE_REQUIRED = "MinSizePercentageRequired"
     const val POSE_VALID = "IsPoseValid"
     const val EYES_WELL_SEPARATED = "AreEyesWellSeparated"
     const val IS_BLURRED = "IsBlurred" // True if blurry, False if clear

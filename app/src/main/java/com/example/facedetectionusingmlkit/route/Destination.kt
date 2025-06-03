@@ -1,9 +1,9 @@
 package com.example.facedetectionusingmlkit.route
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -32,13 +32,13 @@ object Ai : Destination {
         get() = "AI"
 }
 
-object DetectText : Destination {
+object Playground : Destination {
     override val route: String
-        get() = "DetectText"
+        get() = "Playground"
     override val icon: ImageVector
-        get() = Icons.Default.Create
+        get() = Icons.Default.PlayArrow
     override val title: String
-        get() = "Text Recognizer"
+        get() = "Playground"
 }
 
 object WhatsApp : Destination {

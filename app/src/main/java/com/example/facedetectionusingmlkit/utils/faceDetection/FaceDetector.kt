@@ -11,6 +11,7 @@ import android.graphics.Rect
 import androidx.core.graphics.createBitmap
 import com.example.facedetectionusingmlkit.domain.model.FaceBrightnessConfig
 import com.example.facedetectionusingmlkit.domain.model.FaceDetectionResult
+import com.example.facedetectionusingmlkit.domain.model.FaceSizeCheckResult
 import com.example.facedetectionusingmlkit.utils.Logger
 import com.example.facedetectionusingmlkit.utils.formatToDecimalPlaces
 import com.google.mlkit.vision.common.InputImage
@@ -116,7 +117,7 @@ class FaceDetector @Inject constructor(
             val faceHeight = face.boundingBox.height()
 
             // Check against both image height and width
-            val (percentage, sizeValid) = isFaceSizeValid(
+            val faceSizeResult = isFaceSizeValid(
                 face,
                 imageHeight,
                 imageWidth,
@@ -128,10 +129,34 @@ class FaceDetector @Inject constructor(
             faceSpecificKeyValue.add(
                 Pair(
                     FaceFilterKeys.FACE_SIZE_VALID,
-                    "$sizeValid (${percentage.formatToDecimalPlaces(2)}%)"
+                    "${faceSizeResult.isValidFace} (${
+                        faceSizeResult.facePercentage.formatToDecimalPlaces(
+                            2
+                        )
+                    }%)"
                 )
             )
-            if (!sizeValid) isThisFaceClear = false
+            faceSpecificKeyValue.add(
+                Pair(
+                    FaceFilterKeys.FACE_DIMENSION,
+                    "${faceSizeResult.faceWidth} x ${faceSizeResult.faceHeight}"
+                )
+            )
+
+            faceSpecificKeyValue.add(
+                Pair(
+                    FaceFilterKeys.MIN_FACE_SIZE,
+                    "${faceSizeResult.minSize} x ${faceSizeResult.minSize}"
+                )
+            )
+
+            faceSpecificKeyValue.add(
+                Pair(
+                    FaceFilterKeys.MIN_PERCENTAGE_REQUIRED,
+                    "${faceSizeResult.minPercentageRequired}%"
+                )
+            )
+            if (!faceSizeResult.isValidFace) isThisFaceClear = false
 
             // 2. Pose Check
             val poseValid = isPoseValid(face, 25.0f)
@@ -226,21 +251,9 @@ class FaceDetector @Inject constructor(
         totalFaceCountInImage: Int,
         baseRelativeThresholdPercentage: Float = 0.15f, // Your original 15% as a base
         minAbsolutePixelSize: Int = 80 // Minimum width/height in pixels (e.g., 80px, 96px, 120px - TUNE THIS)
-    ): Pair<Float, Boolean> {
+    ): FaceSizeCheckResult {
         val faceWidthPixels = face.boundingBox.width()
         val faceHeightPixels = face.boundingBox.height()
-
-        val calculatedFaceAreaPercentage =
-            ((faceWidthPixels * faceHeightPixels).toFloat() / (imageWidth * imageHeight).toFloat()) * 100
-        // 1. Check Minimum Absolute Pixel Size (Crucial for baseline quality)
-        // This ensures the face isn't just a tiny speck, even if it meets a relative threshold.
-        if (faceWidthPixels < minAbsolutePixelSize || faceHeightPixels < minAbsolutePixelSize) {
-            Logger.d(
-                "FaceSizeCheck",
-                "Rejected: Face too small in absolute pixels (w:$faceWidthPixels, h:$faceHeightPixels, min:$minAbsolutePixelSize)"
-            )
-            return Pair(calculatedFaceAreaPercentage, false)
-        }
 
         // 2. Dynamically Adjust Relative Threshold Based on Face Count
         val adjustedRelativeThresholdPercentage: Float = when (totalFaceCountInImage) {
@@ -256,6 +269,26 @@ class FaceDetector @Inject constructor(
 //            5 -> baseRelativeThresholdPercentage * 0.25f
             else -> baseRelativeThresholdPercentage * 0.30f
         }
+
+        val calculatedFaceAreaPercentage =
+            ((faceWidthPixels * faceHeightPixels).toFloat() / (imageWidth * imageHeight).toFloat()) * 100
+        // 1. Check Minimum Absolute Pixel Size (Crucial for baseline quality)
+        // This ensures the face isn't just a tiny speck, even if it meets a relative threshold.
+        if (faceWidthPixels < minAbsolutePixelSize || faceHeightPixels < minAbsolutePixelSize) {
+            Logger.d(
+                "FaceSizeCheck",
+                "Rejected: Face too small in absolute pixels (w:$faceWidthPixels, h:$faceHeightPixels, min:$minAbsolutePixelSize)"
+            )
+            return FaceSizeCheckResult(
+                facePercentage = calculatedFaceAreaPercentage,
+                isValidFace = false,
+                faceWidth = faceWidthPixels,
+                faceHeight = faceHeightPixels,
+                minSize = minAbsolutePixelSize,
+                minPercentageRequired = adjustedRelativeThresholdPercentage * 100
+            )
+        }
+
         // You could also use a formula, e.g.:
         // val factor = if (totalFaceCountInImage > 1) (1.0f / kotlin.math.sqrt(totalFaceCountInImage.toFloat())).coerceAtLeast(0.4f) else 1.0f
         // val adjustedRelativeThresholdPercentage = baseRelativeThresholdPercentage * factor
@@ -264,7 +297,10 @@ class FaceDetector @Inject constructor(
         val sizePercentageOfHeight = faceHeightPixels.toFloat() / imageHeight.toFloat()
         val sizePercentageOfWidth = faceWidthPixels.toFloat() / imageWidth.toFloat()
 
-        Logger.d("SizeCheck", "sizePercentageOfHeight: $sizePercentageOfHeight, sizePercentageOfWidth: $sizePercentageOfWidth, adjustedRelativeThresholdPercentage: $adjustedRelativeThresholdPercentage")
+        Logger.d(
+            "SizeCheck",
+            "(h%:${sizePercentageOfHeight * 100}, w%:${sizePercentageOfWidth * 100}, adjustedThresh%:${adjustedRelativeThresholdPercentage * 100}) for $totalFaceCountInImage faces."
+        )
         val relativeCheckPassed = sizePercentageOfHeight > adjustedRelativeThresholdPercentage &&
                 sizePercentageOfWidth > adjustedRelativeThresholdPercentage
 
@@ -275,9 +311,13 @@ class FaceDetector @Inject constructor(
             )
         }
 
-        return Pair(
-            calculatedFaceAreaPercentage,
-            relativeCheckPassed
+        return FaceSizeCheckResult(
+            facePercentage = (minOf(sizePercentageOfHeight, sizePercentageOfWidth) * 100),
+            isValidFace = relativeCheckPassed,
+            faceWidth = faceWidthPixels,
+            faceHeight = faceHeightPixels,
+            minSize = minAbsolutePixelSize,
+            minPercentageRequired = adjustedRelativeThresholdPercentage * 100,
         ) // The absolute check already passed if we reach here
     }
 
