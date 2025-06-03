@@ -9,6 +9,7 @@ import android.graphics.ColorMatrixColorFilter
 import android.graphics.Paint
 import android.graphics.Rect
 import androidx.core.graphics.createBitmap
+import com.example.facedetectionusingmlkit.domain.model.FaceBrightnessConfig
 import com.example.facedetectionusingmlkit.domain.model.FaceDetectionResult
 import com.example.facedetectionusingmlkit.utils.Logger
 import com.google.mlkit.vision.common.InputImage
@@ -17,6 +18,7 @@ import com.google.mlkit.vision.face.FaceDetection
 import com.google.mlkit.vision.face.FaceDetectorOptions
 import com.google.mlkit.vision.face.FaceLandmark
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.util.Collections
 import javax.inject.Inject
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -164,7 +166,7 @@ class FaceDetector @Inject constructor(
             if (!isNotBlurred) isThisFaceClear = false
 
             // 4b. Brightness Check
-            val brightnessValid = isBrightnessValid(faceBitmap, 30, 225, 0.10f)
+            val brightnessValid = isFaceBrightnessValid(faceBitmap)
             faceSpecificKeyValue.add(
                 Pair(
                     FaceFilterKeys.BRIGHTNESS_VALID,
@@ -326,41 +328,102 @@ class FaceDetector @Inject constructor(
         return if (count > 0) sumSquaredDifference / count else 0.0
     }
 
-    fun isBrightnessValid(
+    fun isFaceBrightnessValid(
         bitmap: Bitmap,
-        minPixelValue: Int,
-        maxPixelValue: Int,
-        outlierPercentageThreshold: Float
+        config: FaceBrightnessConfig = FaceBrightnessConfig() // Use default or provide custom config
     ): Boolean {
-        if (bitmap.width == 0 || bitmap.height == 0) return false
+        if (bitmap.width == 0 || bitmap.height == 0) {
+            Logger.e(MY_TAG, "Bitmap has zero width or height.")
+            return false
+        }
 
         val width = bitmap.width
         val height = bitmap.height
         val pixels = IntArray(width * height)
         bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
 
-        var tooDarkPixels = 0
-        var tooBrightPixels = 0
+        if (pixels.isEmpty()) {
+            Logger.e(MY_TAG, "Pixel array is empty.")
+            return false
+        }
 
-        for (pixel in pixels) {
-            // Calculate luminance (Y) or average RGB for brightness
+        val luminances = IntArray(pixels.size)
+        var deepShadowPixelCount = 0
+        var blownHighlightPixelCount = 0
+
+        for (i in pixels.indices) {
+            val pixel = pixels[i]
             val r = Color.red(pixel)
             val g = Color.green(pixel)
             val b = Color.blue(pixel)
-            val brightness = (0.299 * r + 0.587 * g + 0.114 * b).toInt() // Luminance
+            val luminance = (0.299 * r + 0.587 * g + 0.114 * b).toInt()
+            luminances[i] = luminance
 
-            if (brightness < minPixelValue) {
-                tooDarkPixels++
-            } else if (brightness > maxPixelValue) {
-                tooBrightPixels++
+            if (luminance < config.absoluteShadowLuminance) {
+                deepShadowPixelCount++
+            }
+            if (luminance > config.absoluteHighlightLuminance) {
+                blownHighlightPixelCount++
             }
         }
 
-        val totalPixels = width * height
-        val darkPercentage = tooDarkPixels.toFloat() / totalPixels.toFloat()
-        val brightPercentage = tooBrightPixels.toFloat() / totalPixels.toFloat()
+        val totalPixels = pixels.size.toFloat()
 
-        // If more than threshold percentage of pixels are too dark or too bright, consider it invalid
-        return darkPercentage <= outlierPercentageThreshold && brightPercentage <= outlierPercentageThreshold
+        // 1. Check for excessive deep shadows (potential underexposure)
+        val shadowPercentage = deepShadowPixelCount / totalPixels
+        if (shadowPercentage > config.maxShadowPercentage) {
+            Logger.d(MY_TAG, "Rejected: Too many deep shadow pixels (${String.format("%.2f", shadowPercentage * 100)}%)")
+            return false
+        }
+
+        // 2. Check for excessive blown highlights (potential overexposure)
+        // Regarding your point "it should not reject the overexposed face image as well":
+        // Typically, "valid brightness" implies NOT being significantly overexposed.
+        // This check aims to identify and reject such cases. If your definition of "valid"
+        // explicitly includes overexposed images, this check might need modification or removal.
+        // For now, I'm assuming "valid" means well-exposed, i.e., not overly bright.
+        val highlightPercentage = blownHighlightPixelCount / totalPixels
+        if (highlightPercentage > config.maxHighlightPercentage) {
+            Logger.d(MY_TAG, "Rejected: Too many blown highlight pixels (${String.format("%.2f", highlightPercentage * 100)}%)")
+            return false
+        }
+
+        // 3. Check for sufficient dynamic range in the non-clipped (or overall) tones
+        if (luminances.size < 20) { // Need enough pixels to calculate percentiles reliably
+            Logger.d(MY_TAG, "Rejected: Not enough pixels for reliable dynamic range check after initial filtering or small image.")
+            return false // Or handle as per specific needs for very small images/regions
+        }
+
+        // Sort luminances to find percentiles
+        // Using a mutable list for sorting; could optimize if memory is a huge concern for very large bitmaps
+        val sortedLuminances = luminances.toMutableList()
+        Collections.sort(sortedLuminances)
+
+        val minPercentileIndex = (sortedLuminances.size * config.dynamicRangeMinPercentile).toInt().coerceIn(0, sortedLuminances.size -1)
+        val maxPercentileIndex = (sortedLuminances.size * config.dynamicRangeMaxPercentile).toInt().coerceIn(0, sortedLuminances.size -1)
+
+        if (minPercentileIndex >= maxPercentileIndex && sortedLuminances.size > 1) {
+            Logger.d(MY_TAG, "Rejected: Percentile indices are problematic (min: $minPercentileIndex, max: $maxPercentileIndex for size ${sortedLuminances.size}). Image likely has extremely low variance.")
+            return false // Indicates very flat image or not enough distinct values
+        }
+        if (sortedLuminances.isEmpty()){
+            Logger.d(MY_TAG, "Rejected: No luminance data to process for dynamic range.")
+            return false
+        }
+
+
+        val luminanceAtMinPercentile = sortedLuminances[minPercentileIndex]
+        val luminanceAtMaxPercentile = sortedLuminances[maxPercentileIndex]
+        val dynamicRange = luminanceAtMaxPercentile - luminanceAtMinPercentile
+
+        Logger.d(MY_TAG, "Shadow Pct: ${String.format("%.2f", shadowPercentage*100)}%, Highlight Pct: ${String.format("%.2f", highlightPercentage*100)}%, Lower Percentile Lum: $luminanceAtMinPercentile, Upper Percentile Lum: $luminanceAtMaxPercentile, Dynamic Range: $dynamicRange")
+
+        if (dynamicRange < config.minRequiredDynamicRange) {
+            Logger.d(MY_TAG, "Rejected: Dynamic range ($dynamicRange) is less than required (${config.minRequiredDynamicRange}). Face may lack contrast or be poorly exposed.")
+            return false
+        }
+
+        Logger.d(MY_TAG, "Accepted: Image meets brightness and contrast criteria.")
+        return true
     }
 }
