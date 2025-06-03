@@ -12,6 +12,7 @@ import androidx.core.graphics.createBitmap
 import com.example.facedetectionusingmlkit.domain.model.FaceBrightnessConfig
 import com.example.facedetectionusingmlkit.domain.model.FaceDetectionResult
 import com.example.facedetectionusingmlkit.utils.Logger
+import com.example.facedetectionusingmlkit.utils.formatToDecimalPlaces
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.face.Face
 import com.google.mlkit.vision.face.FaceDetection
@@ -115,19 +116,19 @@ class FaceDetector @Inject constructor(
             val faceHeight = face.boundingBox.height()
 
             // Check against both image height and width
-            val sizePercentageOfHeight = faceHeight.toFloat() / imageHeight.toFloat()
-            val sizePercentageOfWidth = faceWidth.toFloat() / imageWidth.toFloat()
-            val sizeValid = isFaceSizeValid(face, imageHeight, imageWidth, 0.15f)
+            val (percentage, sizeValid) = isFaceSizeValid(
+                face,
+                imageHeight,
+                imageWidth,
+                allDetectedFaces.size, // Pass the total count here
+                baseRelativeThresholdPercentage = 0.15f, // Or your preferred base
+                minAbsolutePixelSize = 50 // Example, tune this
+            )
 
             faceSpecificKeyValue.add(
                 Pair(
                     FaceFilterKeys.FACE_SIZE_VALID,
-                    "$sizeValid (${
-                        minOf(
-                            round(sizePercentageOfHeight * 100) ,
-                            round(sizePercentageOfHeight * 100)
-                        )
-                    }%)"
+                    "$sizeValid (${percentage.formatToDecimalPlaces(2)}%)"
                 )
             )
             if (!sizeValid) isThisFaceClear = false
@@ -222,16 +223,62 @@ class FaceDetector @Inject constructor(
         face: Face,
         imageHeight: Int,
         imageWidth: Int,
-        thresholdPercentage: Float
-    ): Boolean {
-        val faceWidth = face.boundingBox.width()
-        val faceHeight = face.boundingBox.height()
+        totalFaceCountInImage: Int,
+        baseRelativeThresholdPercentage: Float = 0.15f, // Your original 15% as a base
+        minAbsolutePixelSize: Int = 80 // Minimum width/height in pixels (e.g., 80px, 96px, 120px - TUNE THIS)
+    ): Pair<Float, Boolean> {
+        val faceWidthPixels = face.boundingBox.width()
+        val faceHeightPixels = face.boundingBox.height()
 
-        // Check against both image height and width
-        val sizePercentageOfHeight = faceHeight.toFloat() / imageHeight.toFloat()
-        val sizePercentageOfWidth = faceWidth.toFloat() / imageWidth.toFloat()
+        val calculatedFaceAreaPercentage =
+            ((faceWidthPixels * faceHeightPixels).toFloat() / (imageWidth * imageHeight).toFloat()) * 100
+        // 1. Check Minimum Absolute Pixel Size (Crucial for baseline quality)
+        // This ensures the face isn't just a tiny speck, even if it meets a relative threshold.
+        if (faceWidthPixels < minAbsolutePixelSize || faceHeightPixels < minAbsolutePixelSize) {
+            Logger.d(
+                "FaceSizeCheck",
+                "Rejected: Face too small in absolute pixels (w:$faceWidthPixels, h:$faceHeightPixels, min:$minAbsolutePixelSize)"
+            )
+            return Pair(calculatedFaceAreaPercentage, false)
+        }
 
-        return sizePercentageOfHeight > thresholdPercentage && sizePercentageOfWidth > thresholdPercentage
+        // 2. Dynamically Adjust Relative Threshold Based on Face Count
+        val adjustedRelativeThresholdPercentage: Float = when (totalFaceCountInImage) {
+            0 -> {
+                Logger.w("FaceSizeCheck", "Warning: totalFaceCountInImage is 0.")
+                baseRelativeThresholdPercentage
+            }
+
+            1 -> baseRelativeThresholdPercentage
+            2 -> baseRelativeThresholdPercentage * 0.75f
+            3 -> baseRelativeThresholdPercentage * 0.60f
+            4 -> baseRelativeThresholdPercentage * 0.40f
+//            5 -> baseRelativeThresholdPercentage * 0.25f
+            else -> baseRelativeThresholdPercentage * 0.30f
+        }
+        // You could also use a formula, e.g.:
+        // val factor = if (totalFaceCountInImage > 1) (1.0f / kotlin.math.sqrt(totalFaceCountInImage.toFloat())).coerceAtLeast(0.4f) else 1.0f
+        // val adjustedRelativeThresholdPercentage = baseRelativeThresholdPercentage * factor
+
+        // 3. Check Relative Size with the Adjusted Threshold
+        val sizePercentageOfHeight = faceHeightPixels.toFloat() / imageHeight.toFloat()
+        val sizePercentageOfWidth = faceWidthPixels.toFloat() / imageWidth.toFloat()
+
+        Logger.d("SizeCheck", "sizePercentageOfHeight: $sizePercentageOfHeight, sizePercentageOfWidth: $sizePercentageOfWidth, adjustedRelativeThresholdPercentage: $adjustedRelativeThresholdPercentage")
+        val relativeCheckPassed = sizePercentageOfHeight > adjustedRelativeThresholdPercentage &&
+                sizePercentageOfWidth > adjustedRelativeThresholdPercentage
+
+        if (!relativeCheckPassed) {
+            Logger.d(
+                "FaceSizeCheck",
+                "Rejected: Face too small in relative percentage (h%:${sizePercentageOfHeight * 100}, w%:${sizePercentageOfWidth * 100}, adjustedThresh%:${adjustedRelativeThresholdPercentage * 100}) for $totalFaceCountInImage faces."
+            )
+        }
+
+        return Pair(
+            calculatedFaceAreaPercentage,
+            relativeCheckPassed
+        ) // The absolute check already passed if we reach here
     }
 
     fun isPoseValid(face: Face, angleThreshold: Float): Boolean {
@@ -372,7 +419,15 @@ class FaceDetector @Inject constructor(
         // 1. Check for excessive deep shadows (potential underexposure)
         val shadowPercentage = deepShadowPixelCount / totalPixels
         if (shadowPercentage > config.maxShadowPercentage) {
-            Logger.d(MY_TAG, "Rejected: Too many deep shadow pixels (${String.format("%.2f", shadowPercentage * 100)}%)")
+            Logger.d(
+                MY_TAG,
+                "Rejected: Too many deep shadow pixels (${
+                    String.format(
+                        "%.2f",
+                        shadowPercentage * 100
+                    )
+                }%)"
+            )
             return false
         }
 
@@ -384,13 +439,24 @@ class FaceDetector @Inject constructor(
         // For now, I'm assuming "valid" means well-exposed, i.e., not overly bright.
         val highlightPercentage = blownHighlightPixelCount / totalPixels
         if (highlightPercentage > config.maxHighlightPercentage) {
-            Logger.d(MY_TAG, "Rejected: Too many blown highlight pixels (${String.format("%.2f", highlightPercentage * 100)}%)")
+            Logger.d(
+                MY_TAG,
+                "Rejected: Too many blown highlight pixels (${
+                    String.format(
+                        "%.2f",
+                        highlightPercentage * 100
+                    )
+                }%)"
+            )
             return false
         }
 
         // 3. Check for sufficient dynamic range in the non-clipped (or overall) tones
         if (luminances.size < 20) { // Need enough pixels to calculate percentiles reliably
-            Logger.d(MY_TAG, "Rejected: Not enough pixels for reliable dynamic range check after initial filtering or small image.")
+            Logger.d(
+                MY_TAG,
+                "Rejected: Not enough pixels for reliable dynamic range check after initial filtering or small image."
+            )
             return false // Or handle as per specific needs for very small images/regions
         }
 
@@ -399,14 +465,19 @@ class FaceDetector @Inject constructor(
         val sortedLuminances = luminances.toMutableList()
         Collections.sort(sortedLuminances)
 
-        val minPercentileIndex = (sortedLuminances.size * config.dynamicRangeMinPercentile).toInt().coerceIn(0, sortedLuminances.size -1)
-        val maxPercentileIndex = (sortedLuminances.size * config.dynamicRangeMaxPercentile).toInt().coerceIn(0, sortedLuminances.size -1)
+        val minPercentileIndex = (sortedLuminances.size * config.dynamicRangeMinPercentile).toInt()
+            .coerceIn(0, sortedLuminances.size - 1)
+        val maxPercentileIndex = (sortedLuminances.size * config.dynamicRangeMaxPercentile).toInt()
+            .coerceIn(0, sortedLuminances.size - 1)
 
         if (minPercentileIndex >= maxPercentileIndex && sortedLuminances.size > 1) {
-            Logger.d(MY_TAG, "Rejected: Percentile indices are problematic (min: $minPercentileIndex, max: $maxPercentileIndex for size ${sortedLuminances.size}). Image likely has extremely low variance.")
+            Logger.d(
+                MY_TAG,
+                "Rejected: Percentile indices are problematic (min: $minPercentileIndex, max: $maxPercentileIndex for size ${sortedLuminances.size}). Image likely has extremely low variance."
+            )
             return false // Indicates very flat image or not enough distinct values
         }
-        if (sortedLuminances.isEmpty()){
+        if (sortedLuminances.isEmpty()) {
             Logger.d(MY_TAG, "Rejected: No luminance data to process for dynamic range.")
             return false
         }
@@ -416,10 +487,26 @@ class FaceDetector @Inject constructor(
         val luminanceAtMaxPercentile = sortedLuminances[maxPercentileIndex]
         val dynamicRange = luminanceAtMaxPercentile - luminanceAtMinPercentile
 
-        Logger.d(MY_TAG, "Shadow Pct: ${String.format("%.2f", shadowPercentage*100)}%, Highlight Pct: ${String.format("%.2f", highlightPercentage*100)}%, Lower Percentile Lum: $luminanceAtMinPercentile, Upper Percentile Lum: $luminanceAtMaxPercentile, Dynamic Range: $dynamicRange")
+        Logger.d(
+            MY_TAG,
+            "Shadow Pct: ${
+                String.format(
+                    "%.2f",
+                    shadowPercentage * 100
+                )
+            }%, Highlight Pct: ${
+                String.format(
+                    "%.2f",
+                    highlightPercentage * 100
+                )
+            }%, Lower Percentile Lum: $luminanceAtMinPercentile, Upper Percentile Lum: $luminanceAtMaxPercentile, Dynamic Range: $dynamicRange"
+        )
 
         if (dynamicRange < config.minRequiredDynamicRange) {
-            Logger.d(MY_TAG, "Rejected: Dynamic range ($dynamicRange) is less than required (${config.minRequiredDynamicRange}). Face may lack contrast or be poorly exposed.")
+            Logger.d(
+                MY_TAG,
+                "Rejected: Dynamic range ($dynamicRange) is less than required (${config.minRequiredDynamicRange}). Face may lack contrast or be poorly exposed."
+            )
             return false
         }
 
