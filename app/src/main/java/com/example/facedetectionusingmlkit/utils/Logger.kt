@@ -68,7 +68,13 @@ object Logger {
     }
 
     fun shareLogFile(context: Context) {
-        val authority = "com.qliqle.app.fileProvider"
+        val authority = "${context.packageName}.fileprovider"
+
+        if (!logFile.exists()) {
+            Log.e("Logger", "Log file does not exist, cannot share.")
+            return
+        }
+
         val contentUri: Uri = FileProvider.getUriForFile(context, authority, logFile)
 
         val shareIntent = Intent(Intent.ACTION_SEND).apply {

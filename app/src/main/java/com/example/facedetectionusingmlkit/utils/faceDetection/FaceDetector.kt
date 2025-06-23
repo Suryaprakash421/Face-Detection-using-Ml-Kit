@@ -9,17 +9,27 @@ import android.graphics.ColorMatrixColorFilter
 import android.graphics.Paint
 import android.graphics.Rect
 import androidx.core.graphics.createBitmap
+import androidx.core.graphics.scale
 import com.example.facedetectionusingmlkit.domain.model.FaceBrightnessConfig
 import com.example.facedetectionusingmlkit.domain.model.FaceDetectionResult
 import com.example.facedetectionusingmlkit.domain.model.FaceSizeCheckResult
 import com.example.facedetectionusingmlkit.utils.Logger
 import com.example.facedetectionusingmlkit.utils.formatToDecimalPlaces
+import com.example.facedetectionusingmlkit.workmanager.Models
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.face.Face
 import com.google.mlkit.vision.face.FaceDetection
 import com.google.mlkit.vision.face.FaceDetectorOptions
 import com.google.mlkit.vision.face.FaceLandmark
 import dagger.hilt.android.qualifiers.ApplicationContext
+import org.tensorflow.lite.Interpreter
+import org.tensorflow.lite.gpu.GpuDelegate
+import org.tensorflow.lite.nnapi.NnApiDelegate
+import java.io.FileInputStream
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.nio.MappedByteBuffer
+import java.nio.channels.FileChannel
 import java.util.Collections
 import javax.inject.Inject
 import kotlin.coroutines.resume
@@ -92,6 +102,10 @@ class FaceDetector @Inject constructor(
 
 
             val faceBitmap = cropFaceBitmap(originalBitmap, face.boundingBox, rotationDegrees)
+
+            val embedding = faceBitmap?.let { generateEmbedding(it) }
+            // Use contentToString() to print the array's contents
+            Logger.d("GeneratedEmbedding", "face #$index embedding: ${embedding?.contentToString()}")
 
             if (faceBitmap == null) {
                 Logger.d(
@@ -552,5 +566,78 @@ class FaceDetector @Inject constructor(
 
         Logger.d(MY_TAG, "Accepted: Image meets brightness and contrast criteria.")
         return true
+    }
+
+    private val model = Models.FACENET_512_F16
+    private val interpreter: Interpreter by lazy {
+        val options = Interpreter.Options().apply {
+            setNumThreads(4)
+            addDelegate(NnApiDelegate())
+            setUseXNNPACK(true)
+//            setNumThreads(4)
+        }
+        Interpreter(loadModelFile(), options)
+    }
+
+    private fun loadModelFile(): MappedByteBuffer {
+        context.assets.openFd(model.assetsFilename).use { afd ->
+            FileInputStream(afd.fileDescriptor).channel.use { channel ->
+                return channel.map(
+                    FileChannel.MapMode.READ_ONLY,
+                    afd.startOffset,
+                    afd.declaredLength
+                )
+            }
+        }
+    }
+
+    private fun generateEmbedding(face: Bitmap): FloatArray? {
+        return try {
+            val outputArray = Array(1) { FloatArray(model.outputDims) }
+            val inputBuffer = preprocessImage(face) // ByteBuffer of shape [1, 160, 160, 3]
+            inputBuffer.rewind()
+
+            interpreter.run(inputBuffer, outputArray) // ✅ Direct ByteBuffer input for FLOAT32 model
+
+            outputArray[0]
+        } catch (e: Exception) {
+            Logger.e("Similar", "Error generating embedding - $e")
+            null
+        }
+    }
+
+    private fun preprocessImage(bitmap: Bitmap): ByteBuffer {
+        val inputSize = model.inputDims
+        // Convert the Bitmap to a Mutable ARGB_8888 version
+        val safeBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true)
+
+        val resizedBitmap = safeBitmap.scale(inputSize, inputSize)
+
+        val byteBuffer = ByteBuffer.allocateDirect(inputSize * inputSize * 3 * 4)
+        byteBuffer.order(ByteOrder.nativeOrder())
+
+        val intValues = IntArray(inputSize * inputSize)
+        resizedBitmap.getPixels(intValues, 0, inputSize, 0, 0, inputSize, inputSize)
+
+        // Debug pixel values
+        var maxVal = Float.MIN_VALUE
+        var minVal = Float.MAX_VALUE
+
+        intValues.forEach { pixelValue ->
+            val r = ((pixelValue shr 16) and 0xFF)
+            val g = ((pixelValue shr 8) and 0xFF)
+            val b = (pixelValue and 0xFF)
+
+            // Normalize to [-1, 1] instead of [0, 1]
+            byteBuffer.putFloat((r - 127.5f) / 127.5f)
+            byteBuffer.putFloat((g - 127.5f) / 127.5f)
+            byteBuffer.putFloat((b - 127.5f) / 127.5f)
+
+            maxVal = maxOf(maxVal, r.toFloat(), g.toFloat(), b.toFloat())
+            minVal = minOf(minVal, r.toFloat(), g.toFloat(), b.toFloat())
+        }
+
+        byteBuffer.rewind()
+        return byteBuffer
     }
 }
