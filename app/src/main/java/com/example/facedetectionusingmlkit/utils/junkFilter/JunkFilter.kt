@@ -5,9 +5,11 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.net.Uri
+import android.util.Log
 import android.util.Size
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.scale
+import androidx.exifinterface.media.ExifInterface
 import com.example.facedetectionusingmlkit.data.local.PrefManager
 import com.example.facedetectionusingmlkit.data.local.entity.GalleryPhotoEntity
 import com.example.facedetectionusingmlkit.domain.model.OcrResult
@@ -32,6 +34,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.IOException
+import java.io.InputStream
 import java.nio.ByteBuffer
 import java.security.MessageDigest
 import javax.inject.Inject
@@ -54,6 +58,7 @@ class JunkFilter @Inject constructor(
         .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_FAST)
         .setLandmarkMode(FaceDetectorOptions.LANDMARK_MODE_NONE)
         .setLandmarkMode(FaceDetectorOptions.CONTOUR_MODE_NONE)
+        .setMinFaceSize(0.3f)
         .build()
 
     private val faceDetector by lazy { FaceDetection.getClient(option) }
@@ -209,6 +214,39 @@ class JunkFilter @Inject constructor(
 //                continuation.resumeWithException(e)
 //            }
 //        }
+
+    fun getImageRotationDegrees(context: Context, imageUri: Uri): Int {
+        var inputStream: InputStream? = null
+        try {
+            inputStream = context.contentResolver.openInputStream(imageUri)
+            if (inputStream == null) {
+                Log.e("ImageRotation", "Could not open input stream for Uri: $imageUri")
+                return 0
+            }
+
+            val exif = ExifInterface(inputStream)
+            val orientation = exif.getAttributeInt(
+                ExifInterface.TAG_ORIENTATION,
+                ExifInterface.ORIENTATION_NORMAL
+            )
+
+            return when (orientation) {
+                ExifInterface.ORIENTATION_ROTATE_90 -> 90
+                ExifInterface.ORIENTATION_ROTATE_180 -> 180
+                ExifInterface.ORIENTATION_ROTATE_270 -> 270
+                else -> 0 // ORIENTATION_NORMAL, ORIENTATION_UNDEFINED, etc.
+            }
+        } catch (e: IOException) {
+            Log.e("ImageRotation", "Error reading EXIF data for Uri: $imageUri", e)
+            return 0
+        } catch (e: IllegalArgumentException) {
+            // This can happen if the file is not a valid JPEG or TIFF
+            Log.e("ImageRotation", "Invalid image format or EXIF data for Uri: $imageUri", e)
+            return 0
+        } finally {
+            inputStream?.close()
+        }
+    }
 
     private suspend fun runMlKit(inputImage: InputImage): List<Face> =
         suspendCoroutine { continuation ->

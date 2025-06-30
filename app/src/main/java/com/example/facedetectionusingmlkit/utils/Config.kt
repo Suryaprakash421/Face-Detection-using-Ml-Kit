@@ -98,7 +98,7 @@ object Config {
     val humanKeywords = setOf(
         "person", "people", "man", "fun", "woman", "face", "selfie", "portrait", "child",
         "adult", "youth", "boy", "girl", "crowd", "human", "figure", "pedestrian",
-        "smile", "hairstyle" // Often co-occur with humans
+        "smile", "hairstyle", "jeans", "interaction" // Often co-occur with humans
     )
 
     // Keywords indicating the image is likely a cartoon, art, or illustration
@@ -158,7 +158,7 @@ object Config {
     // Confidence thresholds (adjust based on testing)
     const val HUMAN_CONFIDENCE_THRESHOLD = 0.6f
     const val CARTOON_ART_CONFIDENCE_THRESHOLD = 0.5f
-    const val TEXT_HEAVY_CONFIDENCE_THRESHOLD = 0.5f
+    const val TEXT_HEAVY_CONFIDENCE_THRESHOLD = 0.6f
     const val SCREENSHOT_CONFIDENCE_THRESHOLD = 0.7f
     const val TOY_CONFIDENCE_THRESHOLD = 0.5f
 }

@@ -241,7 +241,7 @@ class MyViewModel @Inject constructor(
 
                 // For gallery images, rotation is often 0.
                 // For camera captures, you might need to read EXIF data for correct rotation.
-                val rotationDegrees = 0
+                val rotationDegrees = faceDetector.getImageRotationDegrees(uri)
 
                 val results = faceDetector.getClearFaces(bitmap, rotationDegrees)
 

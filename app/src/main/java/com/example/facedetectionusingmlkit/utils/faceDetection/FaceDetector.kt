@@ -6,10 +6,14 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
+import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Rect
+import android.net.Uri
+import android.util.Log
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.scale
+import androidx.exifinterface.media.ExifInterface
 import com.example.facedetectionusingmlkit.domain.model.FaceBrightnessConfig
 import com.example.facedetectionusingmlkit.domain.model.FaceDetectionResult
 import com.example.facedetectionusingmlkit.domain.model.FaceSizeCheckResult
@@ -26,6 +30,8 @@ import org.tensorflow.lite.Interpreter
 import org.tensorflow.lite.gpu.GpuDelegate
 import org.tensorflow.lite.nnapi.NnApiDelegate
 import java.io.FileInputStream
+import java.io.IOException
+import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.MappedByteBuffer
@@ -49,11 +55,11 @@ class FaceDetector @Inject constructor(
     }
 
     private val option = FaceDetectorOptions.Builder()
-        .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_FAST) // Keep FAST for speed, but consider ACCURATE if pose/landmark quality is insufficient
-        .setLandmarkMode(FaceDetectorOptions.LANDMARK_MODE_ALL)       // Crucial for eye separation and can improve pose
-        .setClassificationMode(FaceDetectorOptions.CLASSIFICATION_MODE_ALL) // Optional: Useful for eye open probability, smiling
+        .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_ACCURATE) // Keep FAST for speed, but consider ACCURATE if pose/landmark quality is insufficient
+        .setLandmarkMode(FaceDetectorOptions.LANDMARK_MODE_NONE)       // Crucial for eye separation and can improve pose
+        .setClassificationMode(FaceDetectorOptions.CLASSIFICATION_MODE_NONE) // Optional: Useful for eye open probability, smiling
         .setContourMode(FaceDetectorOptions.CONTOUR_MODE_NONE)        // Keep NONE unless you need detailed face contours
-        .setMinFaceSize(0.5f)      // Assumes this method returns a float between 0.0 and 1.0
+        .setMinFaceSize(0.7f)      // Assumes this method returns a float between 0.0 and 1.0
         .build()
 
     private val faceDetector by lazy { FaceDetection.getClient(option) }
@@ -76,16 +82,55 @@ class FaceDetector @Inject constructor(
         }
     }
 
+    fun getImageRotationDegrees(imageUri: Uri): Int {
+        var inputStream: InputStream? = null
+        try {
+            inputStream = context.contentResolver.openInputStream(imageUri)
+            if (inputStream == null) {
+                Log.e("ImageRotation", "Could not open input stream for Uri: $imageUri")
+                return 0
+            }
+
+            val exif = ExifInterface(inputStream)
+            val orientation = exif.getAttributeInt(
+                ExifInterface.TAG_ORIENTATION,
+                ExifInterface.ORIENTATION_NORMAL
+            )
+
+            return when (orientation) {
+                ExifInterface.ORIENTATION_ROTATE_90 -> 90
+                ExifInterface.ORIENTATION_ROTATE_180 -> 180
+                ExifInterface.ORIENTATION_ROTATE_270 -> 270
+                else -> 0 // ORIENTATION_NORMAL, ORIENTATION_UNDEFINED, etc.
+            }
+        } catch (e: IOException) {
+            Log.e("ImageRotation", "Error reading EXIF data for Uri: $imageUri", e)
+            return 0
+        } catch (e: IllegalArgumentException) {
+            // This can happen if the file is not a valid JPEG or TIFF
+            Log.e("ImageRotation", "Invalid image format or EXIF data for Uri: $imageUri", e)
+            return 0
+        } finally {
+            inputStream?.close()
+        }
+    }
+
     suspend fun getClearFaces(
         originalBitmap: Bitmap,
         rotationDegrees: Int,
     ): List<FaceDetectionResult> {
+        val rotatedBitmap = rotateBitmap(originalBitmap, rotationDegrees)
         val allDetectedFaces =
-            runMlKit(originalBitmap, rotationDegrees) // Assuming this is defined in your class
+            runMlKit(rotatedBitmap, 0) // Assuming this is defined in your class
         val resultsList = mutableListOf<FaceDetectionResult>()
 
-        val imageWidth = originalBitmap.width
-        val imageHeight = originalBitmap.height
+        val imageWidth = rotatedBitmap.width
+        val imageHeight = rotatedBitmap.height
+
+        Logger.i(
+            "CheckImageValid",
+            "rotationDegrees: $rotationDegrees, width: $imageWidth, height: $imageHeight"
+        )
 
         val totalFacesInImage = allDetectedFaces.size
 
@@ -101,11 +146,14 @@ class FaceDetector @Inject constructor(
             )
 
 
-            val faceBitmap = cropFaceBitmap(originalBitmap, face.boundingBox, rotationDegrees)
+            val faceBitmap = cropFaceBitmap(rotatedBitmap, face.boundingBox, 0)
 
             val embedding = faceBitmap?.let { generateEmbedding(it) }
             // Use contentToString() to print the array's contents
-            Logger.d("GeneratedEmbedding", "face #$index embedding: ${embedding?.contentToString()}")
+            Logger.d(
+                "GeneratedEmbedding",
+                "face #$index embedding: ${embedding?.contentToString()}"
+            )
 
             if (faceBitmap == null) {
                 Logger.d(
@@ -226,6 +274,28 @@ class FaceDetector @Inject constructor(
         }
 
         return resultsList
+    }
+
+    fun rotateBitmap(bitmap: Bitmap, degrees: Int): Bitmap {
+        if (degrees == 0 || bitmap == null) {
+            return bitmap
+        }
+        val matrix = Matrix()
+        matrix.postRotate(degrees.toFloat())
+        try {
+            val rotatedBitmap =
+                Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+            if (bitmap != rotatedBitmap) {
+                bitmap.recycle() // Recycle the original bitmap if a new one was created
+            }
+            return rotatedBitmap
+        } catch (e: OutOfMemoryError) {
+            Log.e("RotateBitmap", "Out of memory when rotating bitmap", e)
+            return bitmap // Return original to avoid crash, but log the error
+        } catch (e: Exception) {
+            Log.e("RotateBitmap", "Error rotating bitmap", e)
+            return bitmap // Return original to avoid crash, but log the error
+        }
     }
 
     fun cropFaceBitmap(
