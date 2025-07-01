@@ -4,6 +4,8 @@ import android.content.ContentUris
 import android.content.Context
 import android.provider.MediaStore
 import com.example.facedetectionusingmlkit.data.local.entity.GalleryPhotoEntity
+import java.io.File
+import kotlin.collections.set
 
 object MediaHelper {
 
@@ -62,6 +64,7 @@ object MediaHelper {
      * */
     fun getWhatsAppPhotos(context: Context): List<GalleryPhotoEntity> {
         val galleryPhotos = mutableListOf<GalleryPhotoEntity>()
+        val folderImageCount = mutableMapOf<String, Int>()
 
         val projection = arrayOf(
             MediaStore.Images.Media._ID,
@@ -73,8 +76,8 @@ object MediaHelper {
         val sortOrder = "${MediaStore.Images.Media.DATE_TAKEN} DESC"
         val queryUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
 
-        val selection = "${MediaStore.Images.Media.DATA} LIKE ?"
-        val selectionArgs = arrayOf("%/WhatsApp/%")
+        val selection = "${MediaStore.Images.Media.RELATIVE_PATH} LIKE ?"
+        val selectionArgs = arrayOf("%WhatsApp%")
 
         context.contentResolver.query(
             queryUri, projection, selection, selectionArgs, sortOrder
@@ -89,6 +92,10 @@ object MediaHelper {
                 val name = cursor.getString(nameColumn)
                 val path = cursor.getString(pathColumn)
                 val dateTaken = cursor.getLong(dateColumn)
+                val folder = File(path).parent
+                if (folder != null) {
+                    folderImageCount[folder] = folderImageCount.getOrDefault(folder, 0) + 1
+                }
 
                 val fileUri = ContentUris.withAppendedId(queryUri, id)
 
@@ -105,7 +112,9 @@ object MediaHelper {
                 )
             }
         }
-
+        folderImageCount.forEach { (folder, count) ->
+            Logger.d("WhatsAppImageFolders", "Folder: $folder, Photos: $count")
+        }
         return galleryPhotos
     }
 
